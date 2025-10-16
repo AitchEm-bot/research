@@ -1,0 +1,55 @@
+{
+  "claim_generator": "research-c2pa-pipeline/0.1.0",
+  "claim_generator_info": [
+    {
+      "name": "C2PA Robustness Research Pipeline",
+      "version": "0.1.0"
+    }
+  ],
+  "title": "AI-generated image",
+  "format": "PNG",
+  "instance_id": "xmp:iid:img_005_seed47_20251016_210441",
+  "document_id": "xmp:did:img_005_seed47_20251016_210441",
+  "assertions": [
+    {
+      "label": "c2pa.actions",
+      "data": {
+        "actions": [
+          {
+            "action": "c2pa.created",
+            "when": "2025-10-16T18:06:18.392072Z",
+            "software_agent": "CompVis/stable-diffusion-v1-4",
+            "parameters": {
+              "seed": 47,
+              "model_version": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "label": "c2pa.hash.data",
+      "data": {
+        "algorithm": "sha256",
+        "hash": "placeholder_hash",
+        "name": "img_005_seed47_20251016_210441.png"
+      }
+    }
+  ],
+  "signature_info": {
+    "issuer": "Test CA - Research Use Only",
+    "time": "2025-10-16T18:06:18.392072Z",
+    "cert_serial_number": "placeholder_serial"
+  },
+  "asset_metadata": {
+    "filename": "img_005_seed47_20251016_210441.png",
+    "seed": 47,
+    "prompt": "a photograph of a modern city skyline at night",
+    "model": "CompVis/stable-diffusion-v1-4",
+    "resolution": "512x512",
+    "timestamp": "20251016_210441"
+  },
+  "created": "2025-10-16T18:06:18.392072Z",
+  "modified": "2025-10-16T18:06:18.392072Z",
+  "_note": "This manifest was created by the fallback shim. TODO: Re-generate with real c2pa-python library for proper signing."
+}

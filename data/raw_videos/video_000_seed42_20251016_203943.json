@@ -1,0 +1,13 @@
+{
+  "filename": "video_000_seed42_20251016_203943.mp4",
+  "seed": 42,
+  "video_type": "gradient",
+  "duration": 3.0,
+  "fps": 10,
+  "resolution": "256x256",
+  "total_frames": 30,
+  "model_package": "opencv-python",
+  "model_version": "procedural_v1",
+  "timestamp": "20251016_203943",
+  "note": "Procedural generation; replace with diffusion model for production"
+}

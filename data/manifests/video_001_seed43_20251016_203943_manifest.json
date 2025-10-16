@@ -1,0 +1,60 @@
+{
+  "claim_generator": "research-c2pa-pipeline/0.1.0",
+  "claim_generator_info": [
+    {
+      "name": "C2PA Robustness Research Pipeline",
+      "version": "0.1.0"
+    }
+  ],
+  "title": "AI-generated video",
+  "format": "MP4",
+  "instance_id": "xmp:iid:video_001_seed43_20251016_203943",
+  "document_id": "xmp:did:video_001_seed43_20251016_203943",
+  "assertions": [
+    {
+      "label": "c2pa.actions",
+      "data": {
+        "actions": [
+          {
+            "action": "c2pa.created",
+            "when": "2025-10-16T18:06:18.395553Z",
+            "software_agent": "unknown",
+            "parameters": {
+              "seed": 43,
+              "model_version": "procedural_v1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "label": "c2pa.hash.data",
+      "data": {
+        "algorithm": "sha256",
+        "hash": "placeholder_hash",
+        "name": "video_001_seed43_20251016_203943.mp4"
+      }
+    }
+  ],
+  "signature_info": {
+    "issuer": "Test CA - Research Use Only",
+    "time": "2025-10-16T18:06:18.395553Z",
+    "cert_serial_number": "placeholder_serial"
+  },
+  "asset_metadata": {
+    "filename": "video_001_seed43_20251016_203943.mp4",
+    "seed": 43,
+    "video_type": "noise",
+    "duration": 3.0,
+    "fps": 10,
+    "resolution": "256x256",
+    "total_frames": 30,
+    "model_package": "opencv-python",
+    "model_version": "procedural_v1",
+    "timestamp": "20251016_203943",
+    "note": "Procedural generation; replace with diffusion model for production"
+  },
+  "created": "2025-10-16T18:06:18.395553Z",
+  "modified": "2025-10-16T18:06:18.395553Z",
+  "_note": "This manifest was created by the fallback shim. TODO: Re-generate with real c2pa-python library for proper signing."
+}
