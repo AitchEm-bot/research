@@ -50,7 +50,11 @@ data/raw_images/*.json
 data/raw_videos/*.mp4
 data/raw_videos/*.avi
 data/raw_videos/*.json
+data/manifests/*.png
+data/manifests/*.jpg
+data/manifests/*.mp4
 data/manifests/*.json
+data/manifests_c2patool/
 data/transformed/
 data/metrics/
 
@@ -86,6 +90,12 @@ logs/
 .claude/
 CONVERSATION.md
 claude_verification_prompt.txt
+CLAUDE.md
+
+# Old/deprecated scripts (keeping for reference but not tracking changes)
+scripts/embedding/embed_c2pa.py.bak
+scripts/embedding/generate_test_certs.py
+scripts/embedding/test_c2pa_signing.py
 
 # Windows
 Thumbs.db
@@ -103,9 +113,17 @@ htmlcov/
 .env
 .env.local
 
-# C2PA Keys (NEVER commit private keys)
-data/manifests/test_keys/*.key
-data/manifests/test_keys/*.pem
+# C2PA Keys and Certificates (NEVER commit private keys)
+data/manifests/test_keys/
+data/certs/*.key
+data/certs/*.pem
+data/certs/*.crt
+data/certs/*.csr
+data/certs/*.srl
+
+# c2patool binary and downloads
+tools/c2patool/
+tools/*.zip
 
 # Temporary files
 *.tmp

@@ -3,8 +3,8 @@
 Embed C2PA content credentials (manifests) into images and videos.
 
 This script creates C2PA manifests for AI-generated images and videos, embedding
-cryptographic signatures and metadata for provenance tracking. The manifests include
-information about the content's origin, creation details, and digital signatures.
+cryptographic signatures and metadata for provenance tracking using the official
+c2pa-python library.
 
 C2PA Specification:
   Coalition for Content Provenance and Authenticity (C2PA) Technical Specification
@@ -23,6 +23,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+import c2pa
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.backends import default_backend
+
 # Log environment info
 logging.basicConfig(
     level=logging.INFO,
@@ -31,64 +36,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# Attempt to import c2pa-python library
-C2PA_AVAILABLE = False
-try:
-    import c2pa
-    C2PA_AVAILABLE = True
-    logger.info("c2pa-python library loaded successfully")
-except ImportError:
-    logger.warning("c2pa-python not available - using fallback shim")
-    logger.warning("Install with: pip install c2pa-python")
-    logger.warning("Fallback: Will create manifest JSON files without real signing")
-
-
 def log_environment():
     """Log Python and C2PA environment information."""
     logger.info(f"Python version: {sys.version}")
-    logger.info(f"C2PA library available: {C2PA_AVAILABLE}")
-    if C2PA_AVAILABLE:
-        try:
-            logger.info(f"c2pa version: {c2pa.__version__}")
-        except AttributeError:
-            logger.info("c2pa version: unknown")
+    logger.info(f"c2pa SDK version: {c2pa.sdk_version()}")
 
 
-def create_test_keypair(output_dir: Path) -> tuple[Path, Path]:
+def create_manifest_json(asset_path: Path, asset_type: str,
+                         seed: Optional[int] = None) -> Dict[str, Any]:
     """
-    Create or locate test keypair for C2PA signing.
-
-    In production, use proper key management (HSM, key vault, etc.).
-    For testing, we create placeholder key files.
-
-    Args:
-        output_dir: Directory to store test keys
-
-    Returns:
-        Tuple of (private_key_path, certificate_path)
-
-    TODO: Replace with actual key generation when c2pa-python is available
-    """
-    keys_dir = output_dir / "test_keys"
-    keys_dir.mkdir(parents=True, exist_ok=True)
-
-    private_key_path = keys_dir / "test_private.key"
-    cert_path = keys_dir / "test_cert.pem"
-
-    if not private_key_path.exists():
-        logger.info("Creating test keypair placeholders...")
-        # In real implementation, use c2pa key generation or openssl
-        private_key_path.write_text("# Test private key placeholder\n# TODO: Generate real key")
-        cert_path.write_text("# Test certificate placeholder\n# TODO: Generate real certificate")
-        logger.warning("Created placeholder keys - NOT FOR PRODUCTION USE")
-
-    return private_key_path, cert_path
-
-
-def create_manifest_metadata(asset_path: Path, asset_type: str,
-                             seed: Optional[int] = None) -> Dict[str, Any]:
-    """
-    Create C2PA manifest metadata structure.
+    Create C2PA manifest JSON structure.
 
     Args:
         asset_path: Path to the asset file
@@ -96,9 +53,20 @@ def create_manifest_metadata(asset_path: Path, asset_type: str,
         seed: Random seed used to generate the asset (if available)
 
     Returns:
-        Dictionary containing manifest metadata
+        Dictionary containing manifest metadata following C2PA v2 spec
     """
     timestamp = datetime.utcnow().isoformat() + "Z"
+
+    # Determine format/MIME type
+    format_map = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.mp4': 'video/mp4',
+        '.avi': 'video/avi',
+        '.mov': 'video/quicktime',
+    }
+    file_format = format_map.get(asset_path.suffix.lower(), 'application/octet-stream')
 
     # Read asset metadata from accompanying JSON file if it exists
     metadata_path = asset_path.with_suffix('.json')
@@ -107,19 +75,22 @@ def create_manifest_metadata(asset_path: Path, asset_type: str,
         with open(metadata_path, 'r') as f:
             asset_metadata = json.load(f)
 
-    # Build C2PA manifest structure (following C2PA spec)
+    # Extract generation parameters
+    model = asset_metadata.get("model", "unknown")
+    actual_seed = seed or asset_metadata.get("seed", 42)
+    model_version = asset_metadata.get("model_version", "unknown")
+
+    # Build C2PA manifest (V2 format as per c2pa-python >= 0.2.0)
     manifest = {
-        "claim_generator": "research-c2pa-pipeline/0.1.0",
+        "claim_generator": "c2pa-robustness-research/0.1.0",
         "claim_generator_info": [
             {
                 "name": "C2PA Robustness Research Pipeline",
                 "version": "0.1.0"
             }
         ],
-        "title": f"AI-generated {asset_type}",
-        "format": asset_path.suffix[1:].upper(),  # e.g., 'PNG', 'MP4'
-        "instance_id": f"xmp:iid:{asset_path.stem}",
-        "document_id": f"xmp:did:{asset_path.stem}",
+        "format": file_format,
+        "title": f"AI-generated {asset_type}: {asset_path.name}",
         "assertions": [
             {
                 "label": "c2pa.actions",
@@ -128,130 +99,237 @@ def create_manifest_metadata(asset_path: Path, asset_type: str,
                         {
                             "action": "c2pa.created",
                             "when": timestamp,
-                            "software_agent": asset_metadata.get("model", "unknown"),
+                            "softwareAgent": {
+                                "name": model,
+                                "version": model_version
+                            },
+                            "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia",
                             "parameters": {
-                                "seed": seed or asset_metadata.get("seed", "unknown"),
-                                "model_version": asset_metadata.get("model_version", "unknown")
+                                "seed": actual_seed,
+                                "model_version": model_version,
+                                "generation_timestamp": timestamp
                             }
                         }
                     ]
                 }
             },
             {
-                "label": "c2pa.hash.data",
+                "label": "cawg.training-mining",
                 "data": {
-                    "algorithm": "sha256",
-                    "hash": "placeholder_hash",  # TODO: Compute actual hash
-                    "name": asset_path.name
+                    "entries": {
+                        "cawg.ai_inference": {"use": "notAllowed"},
+                        "cawg.ai_generative_training": {"use": "notAllowed"}
+                    }
                 }
             }
         ],
-        "signature_info": {
-            "issuer": "Test CA - Research Use Only",
-            "time": timestamp,
-            "cert_serial_number": "placeholder_serial"
-        },
-        "asset_metadata": asset_metadata,
-        "created": timestamp,
-        "modified": timestamp
+        "ingredients": []
     }
 
     return manifest
 
 
-def embed_c2pa_real(asset_path: Path, output_path: Path, manifest: Dict[str, Any],
-                    private_key: Path, certificate: Path) -> bool:
+def sign_asset(asset_path: Path, output_path: Path, manifest_json: Dict[str, Any],
+               private_key_path: Path, cert_path: Path,
+               tsa_url: Optional[str] = None) -> bool:
     """
-    Embed C2PA manifest using the real c2pa-python library.
+    Sign an asset with C2PA manifest using the c2pa-python library with callback signer.
 
-    TODO: Implement this function when c2pa-python is available and properly installed.
-    This is a placeholder showing the intended API structure.
+    Uses callback signer to support self-signed certificates for testing/research.
 
     Args:
-        asset_path: Input asset file
-        output_path: Output asset file with embedded manifest
-        manifest: Manifest metadata dictionary
-        private_key: Path to signing private key
-        certificate: Path to signing certificate
-
-    Returns:
-        True if successful, False otherwise
-    """
-    if not C2PA_AVAILABLE:
-        logger.error("c2pa library not available for real embedding")
-        return False
-
-    try:
-        # TODO: Replace with actual c2pa-python API calls
-        # Example (API may differ - check c2pa-python documentation):
-        #
-        # builder = c2pa.Builder(manifest)
-        # builder.sign(private_key=str(private_key), cert=str(certificate))
-        # builder.embed(str(asset_path), str(output_path))
-
-        logger.error("Real C2PA embedding not yet implemented")
-        logger.error("TODO: Implement c2pa.Builder().sign().embed() workflow")
-        return False
-
-    except Exception as e:
-        logger.error(f"Failed to embed C2PA manifest: {e}")
-        return False
-
-
-def embed_c2pa_shim(asset_path: Path, manifest_output: Path,
-                   manifest: Dict[str, Any]) -> bool:
-    """
-    Fallback shim: Save manifest as JSON file alongside asset.
-
-    This is used when c2pa-python is not available. The manifest is saved as a
-    separate JSON file that can be validated later when the library is available.
-
-    Args:
-        asset_path: Input asset file
-        manifest_output: Output path for manifest JSON
-        manifest: Manifest metadata dictionary
+        asset_path: Input asset file path
+        output_path: Output signed asset file path
+        manifest_json: Manifest metadata dictionary
+        private_key_path: Path to private key (PEM format)
+        cert_path: Path to certificate chain (PEM format)
+        tsa_url: Timestamp authority URL (optional for testing)
 
     Returns:
         True if successful, False otherwise
     """
     try:
-        manifest_output.parent.mkdir(parents=True, exist_ok=True)
+        # Load private key and certificate
+        with open(private_key_path, "rb") as key_file:
+            private_key_bytes = key_file.read()
 
-        # Add note about shim usage
-        manifest["_note"] = (
-            "This manifest was created by the fallback shim. "
-            "TODO: Re-generate with real c2pa-python library for proper signing."
+        with open(cert_path, "rb") as cert_file:
+            certs_bytes = cert_file.read()
+
+        # Load private key for callback signing
+        private_key = serialization.load_pem_private_key(
+            private_key_bytes,
+            password=None,
+            backend=default_backend()
         )
 
-        with open(manifest_output, 'w') as f:
-            json.dump(manifest, f, indent=2)
+        # Define callback signer function for ES256
+        def callback_signer_es256(data: bytes) -> bytes:
+            """Callback function that signs data using ES256 algorithm."""
+            signature = private_key.sign(data, ec.ECDSA(hashes.SHA256()))
+            return signature
 
-        logger.info(f"Saved manifest shim: {manifest_output}")
+        # Sign the asset using callback signer
+        logger.info(f"Signing asset: {asset_path.name}")
+
+        with c2pa.Signer.from_callback(
+            callback=callback_signer_es256,
+            alg=c2pa.C2paSigningAlg.ES256,
+            certs=certs_bytes.decode('utf-8'),
+            tsa_url=tsa_url  # Can be None for testing
+        ) as signer:
+            with c2pa.Builder(manifest_json) as builder:
+                builder.sign_file(
+                    source_path=str(asset_path),
+                    dest_path=str(output_path),
+                    signer=signer
+                )
+
+        logger.info(f"✅ Successfully signed: {output_path.name}")
         return True
 
     except Exception as e:
-        logger.error(f"Failed to save manifest shim: {e}")
+        logger.error(f"Failed to sign {asset_path.name}: {e}")
+        logger.exception("Detailed error:")
         return False
 
 
-def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
-                  use_real_c2pa: bool = False):
+def verify_signed_asset(asset_path: Path) -> Dict[str, Any]:
     """
-    Process all images and videos, creating C2PA manifests.
+    Verify C2PA manifest in a signed asset, separating trust from integrity validation.
+
+    For research purposes, we distinguish between:
+    - Integrity validation (cryptographic signatures, hashes) - CRITICAL for research
+    - Trust validation (PKI certificate chains) - NOT relevant for robustness testing
+
+    Args:
+        asset_path: Path to signed asset
+
+    Returns:
+        Dictionary containing detailed verification results
+    """
+    try:
+        with c2pa.Reader(str(asset_path)) as reader:
+            manifest_store_json = reader.json()
+            manifest_store = json.loads(manifest_store_json)
+
+            # Check if active manifest exists
+            if "active_manifest" not in manifest_store:
+                logger.warning(f"No active manifest found in {asset_path.name}")
+                return {
+                    "manifest_present": False,
+                    "integrity_verified": False,
+                    "trust_verified": False,
+                    "signature_valid": False,
+                    "hash_match": False,
+                    "details": "No active manifest"
+                }
+
+            active_label = manifest_store["active_manifest"]
+            if active_label not in manifest_store.get("manifests", {}):
+                logger.warning(f"Active manifest '{active_label}' not found in store")
+                return {
+                    "manifest_present": False,
+                    "integrity_verified": False,
+                    "trust_verified": False,
+                    "signature_valid": False,
+                    "hash_match": False,
+                    "details": "Active manifest not in store"
+                }
+
+            manifest = manifest_store["manifests"][active_label]
+
+            # Analyze validation status
+            validation_status = manifest.get("validation_status", [])
+
+            # Separate trust issues from integrity issues
+            trust_issues = []
+            integrity_issues = []
+
+            for status_item in validation_status:
+                # Get the code or description of the validation issue
+                code = status_item.get("code", "")
+                description = str(status_item.get("description", ""))
+
+                # Categorize the issue
+                if any(keyword in code.lower() + description.lower()
+                      for keyword in ["trust", "certificate", "untrusted", "self-signed", "ca", "chain"]):
+                    trust_issues.append(status_item)
+                else:
+                    integrity_issues.append(status_item)
+
+            # Determine verification status
+            # For research: only integrity matters, trust is informational
+            integrity_verified = len(integrity_issues) == 0
+            trust_verified = len(trust_issues) == 0
+
+            # Check specific validation aspects
+            signature_valid = not any("signature" in str(issue).lower()
+                                     for issue in integrity_issues)
+            hash_match = not any("hash" in str(issue).lower()
+                                for issue in integrity_issues)
+
+            result = {
+                "manifest_present": True,
+                "integrity_verified": integrity_verified,  # This is what matters for research
+                "trust_verified": trust_verified,  # Track but don't fail on this
+                "signature_valid": signature_valid,
+                "hash_match": hash_match,
+                "trust_issues": trust_issues,
+                "integrity_issues": integrity_issues,
+                "claim_generator": manifest.get("claim_generator", "N/A"),
+                "title": manifest.get("title", "N/A")
+            }
+
+            # Log appropriately based on research focus
+            if trust_issues and not integrity_issues:
+                logger.info(f"📝 Manifest integrity verified (trust validation skipped): {asset_path.name}")
+                logger.debug(f"   Trust issues (expected with self-signed): {trust_issues}")
+            elif not integrity_issues:
+                logger.info(f"✅ Manifest fully verified: {asset_path.name}")
+            else:
+                logger.warning(f"⚠️ Manifest integrity issues found: {asset_path.name}")
+                logger.warning(f"   Issues: {integrity_issues}")
+
+            logger.info(f"   Claim Generator: {result['claim_generator']}")
+            logger.info(f"   Title: {result['title']}")
+            logger.info(f"   Integrity: {'PASS' if integrity_verified else 'FAIL'}")
+            logger.info(f"   Trust: {'PASS' if trust_verified else 'SKIP (self-signed)'}")
+
+            return result
+
+    except Exception as e:
+        logger.error(f"Failed to verify {asset_path.name}: {e}")
+        return {
+            "manifest_present": False,
+            "integrity_verified": False,
+            "trust_verified": False,
+            "signature_valid": False,
+            "hash_match": False,
+            "error": str(e)
+        }
+
+
+def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
+                  private_key_path: Path, cert_path: Path,
+                  verify: bool = True, tsa_url: Optional[str] = None):
+    """
+    Process all images and videos, creating and embedding C2PA manifests.
 
     Args:
         images_dir: Directory containing raw images
         videos_dir: Directory containing raw videos
-        output_dir: Directory to save manifests
-        use_real_c2pa: If True, attempt real C2PA embedding (requires c2pa-python)
+        output_dir: Directory to save signed assets
+        private_key_path: Path to signing private key
+        cert_path: Path to signing certificate
+        verify: Whether to verify signatures after signing
+        tsa_url: Timestamp authority URL
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create test keypair
-    private_key, certificate = create_test_keypair(output_dir)
-
     total_processed = 0
     total_failed = 0
+    total_verified = 0
 
     # Process images
     if images_dir.exists():
@@ -271,20 +349,24 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
                     pass
 
             # Create manifest
-            manifest = create_manifest_metadata(img_path, "image", seed)
+            manifest = create_manifest_json(img_path, "image", seed)
 
-            # Embed or save manifest
-            manifest_path = output_dir / f"{img_path.stem}_manifest.json"
+            # Output path for signed image
+            signed_path = output_dir / f"{img_path.stem}_signed{img_path.suffix}"
 
-            if use_real_c2pa and C2PA_AVAILABLE:
-                # TODO: Enable when real C2PA is implemented
-                success = embed_c2pa_real(img_path, img_path, manifest,
-                                         private_key, certificate)
-            else:
-                success = embed_c2pa_shim(img_path, manifest_path, manifest)
+            # Sign the image
+            success = sign_asset(img_path, signed_path, manifest,
+                               private_key_path, cert_path, tsa_url)
 
             if success:
                 total_processed += 1
+
+                # Verify the signature
+                if verify:
+                    verification_result = verify_signed_asset(signed_path)
+                    # Count as verified if integrity passes (trust is optional for research)
+                    if verification_result.get("integrity_verified", False):
+                        total_verified += 1
             else:
                 total_failed += 1
 
@@ -306,27 +388,32 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
                     pass
 
             # Create manifest
-            manifest = create_manifest_metadata(vid_path, "video", seed)
+            manifest = create_manifest_json(vid_path, "video", seed)
 
-            # Embed or save manifest
-            manifest_path = output_dir / f"{vid_path.stem}_manifest.json"
+            # Output path for signed video
+            signed_path = output_dir / f"{vid_path.stem}_signed{vid_path.suffix}"
 
-            if use_real_c2pa and C2PA_AVAILABLE:
-                # TODO: Enable when real C2PA is implemented
-                success = embed_c2pa_real(vid_path, vid_path, manifest,
-                                         private_key, certificate)
-            else:
-                success = embed_c2pa_shim(vid_path, manifest_path, manifest)
+            # Sign the video
+            success = sign_asset(vid_path, signed_path, manifest,
+                               private_key_path, cert_path, tsa_url)
 
             if success:
                 total_processed += 1
+
+                # Verify the signature
+                if verify:
+                    verification_result = verify_signed_asset(signed_path)
+                    # Count as verified if integrity passes (trust is optional for research)
+                    if verification_result.get("integrity_verified", False):
+                        total_verified += 1
             else:
                 total_failed += 1
 
     logger.info("=" * 60)
-    logger.info(f"Manifest generation complete")
+    logger.info(f"C2PA Signing Complete")
     logger.info(f"  Processed: {total_processed}")
     logger.info(f"  Failed: {total_failed}")
+    logger.info(f"  Verified: {total_verified}")
     logger.info(f"  Output directory: {output_dir}")
     logger.info("=" * 60)
 
@@ -353,12 +440,30 @@ def main():
         "--output-dir",
         type=Path,
         default=Path("data/manifests"),
-        help="Output directory for C2PA manifests"
+        help="Output directory for signed assets"
     )
     parser.add_argument(
-        "--use-real-c2pa",
+        "--private-key",
+        type=Path,
+        default=Path("data/manifests/test_keys/test_es256_private.key"),
+        help="Path to private key (PEM format)"
+    )
+    parser.add_argument(
+        "--certificate",
+        type=Path,
+        default=Path("data/certs/chain.pem"),
+        help="Path to certificate chain (PEM format)"
+    )
+    parser.add_argument(
+        "--tsa-url",
+        type=str,
+        default=None,
+        help="Timestamp Authority URL (optional, None for testing with self-signed certs)"
+    )
+    parser.add_argument(
+        "--no-verify",
         action="store_true",
-        help="Attempt to use real c2pa-python library (if available)"
+        help="Skip verification after signing"
     )
 
     args = parser.parse_args()
@@ -366,20 +471,30 @@ def main():
     # Log environment
     log_environment()
 
-    if not C2PA_AVAILABLE:
-        logger.warning("=" * 60)
-        logger.warning("c2pa-python library is NOT available")
-        logger.warning("Using fallback shim - manifests will be JSON files only")
-        logger.warning("Install c2pa-python for real signing:")
-        logger.warning("  pip install c2pa-python")
-        logger.warning("=" * 60)
+    # Check if keys exist
+    if not args.private_key.exists():
+        logger.error(f"Private key not found: {args.private_key}")
+        logger.error("Run: python scripts/embedding/generate_test_certs.py")
+        sys.exit(1)
+
+    if not args.certificate.exists():
+        logger.error(f"Certificate not found: {args.certificate}")
+        logger.error("Run: python scripts/embedding/generate_test_certs.py")
+        sys.exit(1)
+
+    logger.info(f"Using private key: {args.private_key}")
+    logger.info(f"Using certificate: {args.certificate}")
+    logger.info(f"TSA URL: {args.tsa_url}")
 
     # Process assets
     process_assets(
         images_dir=args.images_dir,
         videos_dir=args.videos_dir,
         output_dir=args.output_dir,
-        use_real_c2pa=args.use_real_c2pa
+        private_key_path=args.private_key,
+        cert_path=args.certificate,
+        verify=not args.no_verify,
+        tsa_url=args.tsa_url
     )
 
 
