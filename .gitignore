@@ -73,6 +73,8 @@ results/
 # Logs
 logs/
 *.log
+/sessions
+nul
 
 # Jupyter Notebook
 .ipynb_checkpoints
