@@ -142,11 +142,18 @@ def generate_video(output_path: Path, duration: float = 3.0, fps: int = 10,
     logger.info(f"Generating {duration}s video at {width}×{height}, {fps} fps ({total_frames} frames)")
 
     # Set up video writer
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # MP4 codec
+    # Try H.264 codec first (better compatibility on Windows), fallback to mp4v
+    fourcc = cv2.VideoWriter_fourcc(*'H264')
     writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
 
     if not writer.isOpened():
+        logger.warning("H264 codec failed, trying mp4v codec")
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
+
+    if not writer.isOpened():
         logger.error(f"Failed to open video writer for {output_path}")
+        logger.error("Please ensure OpenCV is properly installed with video codec support")
         return
 
     # Generate and write frames

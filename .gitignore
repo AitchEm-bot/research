@@ -1,0 +1,120 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# PyTorch & ML Model Caches
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+checkpoints/
+models/
+
+# HuggingFace Cache (Stable Diffusion models are ~4GB)
+.cache/
+huggingface/
+.huggingface/
+
+# Data Directories (Generated AI content - large files)
+data/raw_images/*.png
+data/raw_images/*.jpg
+data/raw_images/*.jpeg
+data/raw_images/*.json
+data/raw_videos/*.mp4
+data/raw_videos/*.avi
+data/raw_videos/*.json
+data/manifests/*.json
+data/transformed/
+data/metrics/
+
+# Keep directory structure but ignore contents
+!data/raw_images/.gitkeep
+!data/raw_videos/.gitkeep
+!data/manifests/.gitkeep
+!data/transformed/.gitkeep
+!data/metrics/.gitkeep
+
+# Results & Outputs
+results/
+*.csv
+*.html
+
+# Logs
+logs/
+*.log
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Claude Code
+.claude/
+CONVERSATION.md
+claude_verification_prompt.txt
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment variables
+.env
+.env.local
+
+# C2PA Keys (NEVER commit private keys)
+data/manifests/test_keys/*.key
+data/manifests/test_keys/*.pem
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+temp/
+tmp/
+
+# System files
+.DS_Store
+*.pyc

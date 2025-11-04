@@ -1,8 +1,0 @@
-{
-  "filename": "img_001_seed43_20251016_210441.png",
-  "seed": 43,
-  "prompt": "a close-up photo of a red rose with water droplets",
-  "model": "CompVis/stable-diffusion-v1-4",
-  "resolution": "512x512",
-  "timestamp": "20251016_210441"
-}

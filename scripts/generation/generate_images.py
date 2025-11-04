@@ -42,6 +42,8 @@ def log_environment():
     if torch.cuda.is_available():
         logger.info(f"CUDA version: {torch.version.cuda}")
         logger.info(f"GPU device: {torch.cuda.get_device_name(0)}")
+        vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        logger.info(f"GPU VRAM: {vram_gb:.2f} GB")
 
 
 def set_seed(seed: int):
@@ -90,6 +92,14 @@ def generate_images(output_dir: Path, count: int = 10, seed: int = 42,
     logger.info(f"Loading Stable Diffusion model: {model_id}")
 
     try:
+        # Determine if we should use memory optimizations (for GPUs with ≤8GB VRAM)
+        use_memory_optimizations = False
+        if torch.cuda.is_available():
+            vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            use_memory_optimizations = vram_gb <= 8.5
+            if use_memory_optimizations:
+                logger.info(f"Enabling memory optimizations for {vram_gb:.2f}GB VRAM GPU")
+
         pipe = StableDiffusionPipeline.from_pretrained(
             model_id,
             torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
@@ -98,6 +108,19 @@ def generate_images(output_dir: Path, count: int = 10, seed: int = 42,
 
         if torch.cuda.is_available():
             pipe = pipe.to("cuda")
+
+            # Apply memory optimizations for 8GB VRAM GPUs (like RTX 4060)
+            if use_memory_optimizations:
+                logger.info("Applying memory optimizations:")
+                logger.info("  - Enabling attention slicing")
+                pipe.enable_attention_slicing(slice_size=1)
+
+                # Optional: Try to use xformers if available for more efficient attention
+                try:
+                    pipe.enable_xformers_memory_efficient_attention()
+                    logger.info("  - Enabled xformers memory efficient attention")
+                except Exception:
+                    logger.info("  - xformers not available (optional)")
         else:
             logger.warning("CUDA not available, using CPU (will be slow)")
 
@@ -147,6 +170,11 @@ def generate_images(output_dir: Path, count: int = 10, seed: int = 42,
                 guidance_scale=7.5,
                 generator=generator
             ).images[0]
+
+        # Log VRAM usage after generation
+        if torch.cuda.is_available():
+            vram_used = torch.cuda.max_memory_allocated() / (1024**3)
+            logger.info(f"  Peak VRAM used: {vram_used:.2f} GB")
 
         # Save image with metadata in filename
         filename = f"img_{i:03d}_seed{image_seed}_{timestamp}.png"

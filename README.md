@@ -48,21 +48,75 @@ research/
 ## Dependencies
 
 ### System Requirements
-- Python >= 3.10
-- CUDA-capable GPU (recommended for image generation)
-- ffmpeg (for video operations)
+- **Python**: >= 3.12 (tested with 3.12.6)
+- **CUDA GPU**: NVIDIA GPU with CUDA 12.1+ support (tested on RTX 4060 Laptop with 8GB VRAM)
+- **ffmpeg**: For video operations (install via system package manager or winget)
+- **OS**: Windows 10/11, Linux (Ubuntu/WSL2)
 
-### Python Packages
+### Installation
+
+#### Option 1: Using requirements.txt (Recommended)
 
 ```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118  # CUDA 11.8
-pip install diffusers transformers accelerate
-pip install opencv-python Pillow numpy
-pip install pandas matplotlib seaborn scikit-image
-pip install c2pa-python  # Optional - scripts work with fallback shim
+# Install all dependencies with CUDA 12.1 support
+pip install -r requirements.txt
 ```
 
-**Note**: The `c2pa-python` library is optional for initial testing. If not available, the embedding script will create manifest JSON files using a fallback shim.
+#### Option 2: Manual Installation
+
+```bash
+# Core deep learning (CUDA 12.1 build for RTX 4060 and newer GPUs)
+pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+
+# Generative AI models
+pip install diffusers==0.31.0 transformers==4.47.1 accelerate==1.2.1
+
+# Memory optimization for 8GB VRAM (optional but recommended)
+pip install xformers==0.0.28.post2
+
+# Image/video processing
+pip install opencv-python==4.10.0.84 Pillow==11.0.0 ffmpeg-python==0.2.0
+
+# Scientific computing & analysis
+pip install numpy==2.2.1 pandas==2.2.3 scikit-image==0.24.0
+pip install matplotlib==3.9.3 seaborn==0.13.2
+
+# CLI utilities
+pip install typer==0.15.1 python-dotenv==1.0.1 tqdm==4.67.1
+
+# C2PA (optional - using fallback shim if unavailable)
+# pip install c2pa-python==0.4.2
+```
+
+**Notes**:
+- The `c2pa-python` library is optional. Scripts use a fallback shim if unavailable.
+- `xformers` provides memory-efficient attention for 8GB VRAM GPUs
+- CUDA 12.1 build is compatible with CUDA 12.x drivers (12.1-12.9)
+
+### Windows-Specific Setup
+
+#### Installing ffmpeg on Windows
+
+```bash
+# Using winget (Windows 11)
+winget install ffmpeg
+
+# Or download from: https://www.gyan.dev/ffmpeg/builds/
+# Add to PATH after extraction
+```
+
+#### GPU Memory Optimization for RTX 4060 (8GB VRAM)
+
+The scripts automatically enable memory optimizations for GPUs with ≤8GB VRAM:
+- Half-precision (FP16) inference
+- Attention slicing
+- Model offloading to CPU when needed
+
+To force CPU-only mode (if GPU unavailable):
+```bash
+export CUDA_VISIBLE_DEVICES=""  # Linux/WSL
+set CUDA_VISIBLE_DEVICES=       # Windows CMD
+```
 
 ## Quick Start - Smoke Test
 
@@ -145,6 +199,7 @@ python scripts/embedding/embed_c2pa.py \
 
 Check that all expected files were created:
 
+**Linux/WSL:**
 ```bash
 # Count generated files
 ls data/raw_images/*.png | wc -l    # Should show: 10
@@ -159,6 +214,20 @@ ffmpeg -i data/raw_videos/video_000_seed42_*.mp4
 
 # View a sample manifest
 cat data/manifests/img_000_seed42_*_manifest.json | head -30
+```
+
+**Windows (PowerShell):**
+```powershell
+# Count generated files
+(Get-ChildItem data\raw_images\*.png).Count    # Should show: 10
+(Get-ChildItem data\raw_videos\*.mp4).Count    # Should show: 2
+(Get-ChildItem data\manifests\*_manifest.json).Count  # Should show: 12
+
+# Inspect a sample video
+ffmpeg -i data\raw_videos\video_000_seed42_*.mp4
+
+# View a sample manifest (first 30 lines)
+Get-Content data\manifests\img_000_seed42_*_manifest.json | Select-Object -First 30
 ```
 
 ## Technical Details

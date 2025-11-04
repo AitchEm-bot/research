@@ -1,8 +1,0 @@
-{
-  "filename": "img_003_seed45_20251016_210441.png",
-  "seed": 45,
-  "prompt": "a portrait of a robot with glowing eyes",
-  "model": "CompVis/stable-diffusion-v1-4",
-  "resolution": "512x512",
-  "timestamp": "20251016_210441"
-}

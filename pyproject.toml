@@ -1,7 +1,24 @@
 [project]
-name = "research"
+name = "c2pa-robustness-research"
 version = "0.1.0"
-description = "Add your description here"
+description = "Testing C2PA metadata robustness on AI-generated images and videos under compression and editing transforms"
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = []
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "diffusers>=0.31.0",
+    "transformers>=4.47.1",
+    "accelerate>=1.2.1",
+    "opencv-python>=4.10.0",
+    "Pillow>=11.0.0",
+    "ffmpeg-python>=0.2.0",
+    "numpy>=2.2.1",
+    "pandas>=2.2.3",
+    "scikit-image>=0.24.0",
+    "matplotlib>=3.9.3",
+    "seaborn>=0.13.2",
+    "typer>=0.15.1",
+    "python-dotenv>=1.0.1",
+    "tqdm>=4.67.1",
+]

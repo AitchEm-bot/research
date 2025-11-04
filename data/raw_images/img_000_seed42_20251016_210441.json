@@ -1,8 +1,0 @@
-{
-  "filename": "img_000_seed42_20251016_210441.png",
-  "seed": 42,
-  "prompt": "a photograph of a mountain landscape at sunset",
-  "model": "CompVis/stable-diffusion-v1-4",
-  "resolution": "512x512",
-  "timestamp": "20251016_210441"
-}

@@ -1,0 +1,46 @@
+# C2PA Robustness Testing Research - Requirements
+# Updated for Windows with CUDA 12.1 support (RTX 4060 Laptop)
+# Python >=3.12
+# Last updated: 2025-11-03
+
+# Deep Learning Framework (CUDA 12.1 build for RTX 4060)
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+# Generative AI Models
+diffusers==0.31.0
+transformers==4.47.1
+accelerate==1.2.1
+
+# Memory optimization for 8GB VRAM (optional but recommended)
+# xformers==0.0.28.post2; platform_system != "Darwin"
+
+# C2PA Content Credentials
+# Note: c2pa-python may not have Windows wheels; using fallback shim
+c2pa-python==0.4.2
+
+# Image/Video Processing
+opencv-python==4.10.0.84
+Pillow==11.0.0
+ffmpeg-python==0.2.0
+
+# Scientific Computing
+numpy==2.2.1
+pandas==2.2.3
+
+# Metrics & Analysis
+scikit-image==0.24.0
+# pyvmaf - Python wrapper for VMAF (install separately with libvmaf)
+
+# Visualization
+matplotlib==3.9.3
+seaborn==0.13.2
+
+# CLI & Utilities
+typer==0.15.1
+
+# Additional utilities
+python-dotenv==1.0.1
+tqdm==4.67.1
