@@ -57,6 +57,8 @@ data/manifests/*.json
 data/manifests_c2patool/
 data/transformed/
 data/metrics/
+data/manifests_json/*.json
+
 
 # Keep directory structure but ignore contents
 !data/raw_images/.gitkeep
@@ -64,6 +66,7 @@ data/metrics/
 !data/manifests/.gitkeep
 !data/transformed/.gitkeep
 !data/metrics/.gitkeep
+!data/manifests_json/.gitkeep
 
 # Results & Outputs
 results/

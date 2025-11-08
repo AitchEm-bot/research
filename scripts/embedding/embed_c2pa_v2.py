@@ -272,7 +272,9 @@ def verify_signed_asset(asset_path: Path) -> Dict[str, Any]:
         # Check for critical integrity validations
         signature_valid = any("claimSignature.validated" in check.get("code", "")
                             for check in success_checks)
-        hash_match = any("assertion.dataHash.match" in check.get("code", "")
+        # Check for both image hash (dataHash) and video hash (bmffHash for MP4/BMFF format)
+        hash_match = any("assertion.dataHash.match" in check.get("code", "") or
+                        "assertion.bmffHash.match" in check.get("code", "")
                         for check in success_checks)
         assertion_uris_match = any("assertion.hashedURI.match" in check.get("code", "")
                                    for check in success_checks)
