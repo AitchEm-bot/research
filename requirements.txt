@@ -25,6 +25,7 @@ c2pa-python==0.4.2
 opencv-python==4.10.0.84
 Pillow==11.0.0
 ffmpeg-python==0.2.0
+imageio-ffmpeg==0.5.1
 
 # Scientific Computing
 numpy==2.2.1

@@ -1,31 +1,39 @@
 #!/usr/bin/env python3
 """
-Generate deterministic AI videos using a frame-based approach.
+Generate AI videos using Stable Video Diffusion (SVD).
 
-This script generates short, low-resolution videos (2-4 seconds) for testing C2PA
-robustness. It uses a simple frame generation approach with deterministic seeding.
+This script generates short, high-quality videos using Stable Video Diffusion,
+a latent video diffusion model that converts static images into realistic video sequences.
 
-For production use, consider video diffusion models such as:
-  - Stable Video Diffusion (Blattmann et al., preprint) - https://stability.ai/research/stable-video-diffusion
-  - Image-to-Video models (various, check peer-review status)
+IMPORTANT: This uses a PREPRINT (not peer-reviewed) model. Annotate in thesis/reports.
 
-Current implementation: Frame-based synthetic video generation using procedural
-patterns to ensure deterministic, reproducible outputs.
+Citation:
+  Stable Video Diffusion - Blattmann et al., "Stable Video Diffusion: Scaling
+  Latent Video Diffusion Models to Large Datasets," arXiv 2311.15127, November 2023
+  (PREPRINT - not yet peer-reviewed)
+  https://arxiv.org/abs/2311.15127
+
+Architecture:
+  - Image-to-video diffusion model
+  - Native resolution: 1024×576 (landscape)
+  - Output: 25 frames downscaled to 512×512 for this project
+  - Requires pre-generated conditioning images (1024×576)
 
 Usage:
-  python generate_videos.py --seed 42 --count 2 --output-dir data/raw_videos/
+  python generate_videos.py --seed 100 --count 2 --output-dir data/raw_videos/
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
 
+import torch
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-import cv2
+from PIL import Image
 
 # Log environment info
 logging.basicConfig(
@@ -36,217 +44,220 @@ logger = logging.getLogger(__name__)
 
 
 def log_environment():
-    """Log Python and OpenCV environment information."""
+    """Log Python, torch, and CUDA environment information."""
     logger.info(f"Python version: {sys.version}")
-    logger.info(f"OpenCV version: {cv2.__version__}")
-    logger.info(f"NumPy version: {np.__version__}")
-    logger.info(f"PIL (Pillow) version: {Image.__version__}")
+    logger.info(f"PyTorch version: {torch.__version__}")
+    logger.info(f"CUDA available: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        logger.info(f"CUDA version: {torch.version.cuda}")
+        logger.info(f"GPU device: {torch.cuda.get_device_name(0)}")
+        vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        logger.info(f"GPU VRAM: {vram_gb:.2f} GB")
 
 
 def set_seed(seed: int):
     """
-    Set random seed for reproducibility.
+    Set random seed for reproducibility across numpy, torch, and Python random.
 
     Args:
         seed: Integer seed value
     """
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     logger.info(f"Random seed set to: {seed}")
 
 
-def generate_synthetic_frame(frame_idx: int, total_frames: int, width: int,
-                             height: int, seed: int, video_type: str) -> np.ndarray:
+def load_conditioning_images(images_dir: Path, count: int) -> list:
     """
-    Generate a single synthetic video frame using procedural patterns.
+    Load pre-generated conditioning images for SVD.
 
     Args:
-        frame_idx: Current frame index
-        total_frames: Total number of frames in video
-        width: Frame width in pixels
-        height: Frame height in pixels
-        seed: Random seed for this video
-        video_type: Type of pattern ('gradient', 'noise', 'shapes')
+        images_dir: Directory containing 1024×576 images
+        count: Number of images to load
 
     Returns:
-        NumPy array of shape (height, width, 3) with RGB values
+        List of PIL Image objects
     """
-    # Create base frame
-    frame = np.zeros((height, width, 3), dtype=np.uint8)
+    # Find all PNG images in the directory
+    image_files = sorted(images_dir.glob("vidimg_*.png"))
 
-    if video_type == 'gradient':
-        # Animated gradient
-        progress = frame_idx / total_frames
-        for y in range(height):
-            for x in range(width):
-                r = int((x / width) * 255)
-                g = int((y / height) * 255)
-                b = int(progress * 255)
-                frame[y, x] = [r, g, b]
+    if len(image_files) < count:
+        logger.error(f"Found only {len(image_files)} images, but need {count}")
+        logger.error(f"Run generate_video_images.py first to create conditioning images")
+        sys.exit(1)
 
-    elif video_type == 'noise':
-        # Deterministic noise pattern
-        local_seed = seed + frame_idx
-        rng = np.random.RandomState(local_seed)
-        noise = rng.randint(0, 256, (height, width, 3), dtype=np.uint8)
-        # Blend with smooth gradient for visual interest
-        gradient = np.linspace(0, 255, width, dtype=np.uint8)
-        gradient = np.tile(gradient, (height, 1))
-        for c in range(3):
-            frame[:, :, c] = (noise[:, :, c] * 0.3 + gradient * 0.7).astype(np.uint8)
+    images = []
+    for i in range(count):
+        img_path = image_files[i]
+        logger.info(f"Loading conditioning image: {img_path.name}")
+        img = Image.open(img_path).convert("RGB")
 
-    elif video_type == 'shapes':
-        # Animated geometric shapes
-        progress = frame_idx / total_frames
-        # Convert to PIL for drawing
-        pil_frame = Image.fromarray(frame)
-        draw = ImageDraw.Draw(pil_frame)
+        # Verify resolution
+        if img.size != (1024, 576):
+            logger.warning(f"Image {img_path.name} has size {img.size}, expected (1024, 576)")
+            logger.info(f"Resizing to 1024×576")
+            img = img.resize((1024, 576), Image.Resampling.LANCZOS)
 
-        # Draw circles that move across the frame
-        circle_x = int(width * progress)
-        circle_y = height // 2
-        radius = 30
-        draw.ellipse(
-            [circle_x - radius, circle_y - radius,
-             circle_x + radius, circle_y + radius],
-            fill=(255, 100, 100)
-        )
+        images.append(img)
 
-        # Draw rectangle
-        rect_y = int(height * progress)
-        draw.rectangle(
-            [width // 4, rect_y, width * 3 // 4, rect_y + 20],
-            fill=(100, 255, 100)
-        )
-
-        frame = np.array(pil_frame)
-
-    return frame
+    return images
 
 
-def generate_video(output_path: Path, duration: float = 3.0, fps: int = 10,
-                  width: int = 256, height: int = 256, seed: int = 42,
-                  video_type: str = 'gradient'):
+def generate_videos(output_dir: Path, images_dir: Path, count: int = 2,
+                   seed: int = 100, target_resolution: int = 512):
     """
-    Generate a single synthetic video file.
-
-    Args:
-        output_path: Path to save the video file
-        duration: Video duration in seconds
-        fps: Frames per second
-        width: Video width in pixels
-        height: Video height in pixels
-        seed: Random seed for reproducibility
-        video_type: Type of synthetic pattern
-    """
-    total_frames = int(duration * fps)
-    logger.info(f"Generating {duration}s video at {width}×{height}, {fps} fps ({total_frames} frames)")
-
-    # Set up video writer
-    # Try H.264 codec first (better compatibility on Windows), fallback to mp4v
-    fourcc = cv2.VideoWriter_fourcc(*'H264')
-    writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
-
-    if not writer.isOpened():
-        logger.warning("H264 codec failed, trying mp4v codec")
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        writer = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
-
-    if not writer.isOpened():
-        logger.error(f"Failed to open video writer for {output_path}")
-        logger.error("Please ensure OpenCV is properly installed with video codec support")
-        return
-
-    # Generate and write frames
-    for frame_idx in range(total_frames):
-        frame_rgb = generate_synthetic_frame(
-            frame_idx, total_frames, width, height, seed, video_type
-        )
-        # OpenCV uses BGR format
-        frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-        writer.write(frame_bgr)
-
-        if (frame_idx + 1) % 10 == 0 or frame_idx == total_frames - 1:
-            logger.info(f"  Frame {frame_idx + 1}/{total_frames}")
-
-    writer.release()
-    logger.info(f"Saved video: {output_path}")
-
-
-def generate_videos(output_dir: Path, count: int = 2, seed: int = 42,
-                   duration: float = 3.0, fps: int = 10,
-                   width: int = 256, height: int = 256):
-    """
-    Generate multiple deterministic test videos.
+    Generate videos using Stable Video Diffusion.
 
     Args:
         output_dir: Directory to save generated videos
+        images_dir: Directory containing conditioning images (1024×576)
         count: Number of videos to generate
         seed: Random seed for reproducibility
-        duration: Video duration in seconds
-        fps: Frames per second
-        width: Video width in pixels
-        height: Video height in pixels
+        target_resolution: Target output resolution (default: 512×512)
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Set seed for reproducibility
     set_seed(seed)
 
-    # Video types to cycle through
-    video_types = ['gradient', 'noise', 'shapes']
+    # Import required libraries
+    try:
+        from diffusers import StableVideoDiffusionPipeline
+        from diffusers.utils import export_to_video
+    except ImportError:
+        logger.error("diffusers library not found or outdated")
+        logger.error("Install with: pip install diffusers>=0.25.0 imageio-ffmpeg")
+        sys.exit(1)
+
+    # Load conditioning images
+    logger.info(f"Loading {count} conditioning images from {images_dir}")
+    conditioning_images = load_conditioning_images(images_dir, count)
+
+    # Load Stable Video Diffusion pipeline
+    model_id = "stabilityai/stable-video-diffusion-img2vid-xt"
+    logger.info("=" * 70)
+    logger.info("VIDEO GENERATION MODEL INFO")
+    logger.info("=" * 70)
+    logger.info(f"Model: {model_id}")
+    logger.info("Citation: Blattmann et al., arXiv 2311.15127, Nov 2023")
+    logger.info("Status: PREPRINT (not yet peer-reviewed) - annotate in thesis")
+    logger.info("Native resolution: 1024×576 (25 frames)")
+    logger.info(f"Output resolution: {target_resolution}×{target_resolution} (downscaled)")
+    logger.info("=" * 70)
+    logger.info("")
+
+    logger.info(f"Loading Stable Video Diffusion model: {model_id}")
+
+    try:
+        # Determine if we should use aggressive memory optimizations
+        use_cpu_offload = False
+        if torch.cuda.is_available():
+            vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            use_cpu_offload = vram_gb <= 8.5
+            if use_cpu_offload:
+                logger.info(f"Enabling CPU offloading for {vram_gb:.2f}GB VRAM GPU")
+                logger.info("Note: This will slow generation but prevent OOM errors")
+
+        # Load pipeline with fp16 precision
+        pipe = StableVideoDiffusionPipeline.from_pretrained(
+            model_id,
+            torch_dtype=torch.float16,
+            variant="fp16"
+        )
+
+        # Memory optimizations for RTX 4060 8GB
+        if use_cpu_offload:
+            # CPU offloading: moves model components between CPU/GPU as needed
+            pipe.enable_model_cpu_offload()
+            logger.info("Enabled model CPU offloading (reduces VRAM to <8GB)")
+        else:
+            # If VRAM > 8GB, keep everything on GPU for speed
+            pipe = pipe.to("cuda")
+
+        # Additional memory optimizations (optional)
+        try:
+            pipe.enable_vae_slicing()
+            logger.info("Enabled VAE slicing for memory efficiency")
+        except Exception:
+            logger.info("VAE slicing not available (skipping)")
+
+    except Exception as e:
+        logger.error(f"Failed to load SVD model: {e}")
+        logger.error("Ensure you have sufficient disk space (~14GB for model download)")
+        logger.error("and network connectivity to HuggingFace")
+        sys.exit(1)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Log model/package information (placeholders for future diffusion models)
-    logger.info("=" * 60)
-    logger.info("VIDEO GENERATION MODEL INFO (Placeholder)")
-    logger.info("=" * 60)
-    logger.info("Current method: Procedural frame-based generation")
-    logger.info("Model package: opencv-python (cv2)")
-    logger.info("Model version: N/A (procedural generation)")
-    logger.info("")
-    logger.info("For production, consider:")
-    logger.info("  - Stable Video Diffusion (Stability AI, preprint)")
-    logger.info("  - AnimateDiff or similar video diffusion models")
-    logger.info("  - Image-to-video models (check peer-review status)")
-    logger.info("=" * 60)
-
     for i in range(count):
-        video_seed = seed + i
-        video_type = video_types[i % len(video_types)]
+        current_seed = seed + i
+        conditioning_image = conditioning_images[i]
 
-        logger.info(f"\n[{i+1}/{count}] Generating video with seed {video_seed}, type '{video_type}'")
+        logger.info(f"\n[{i+1}/{count}] Generating video with seed {current_seed}")
+        logger.info(f"  Conditioning image: {conditioning_image.size}")
+        logger.info("  This may take 5-10 minutes on RTX 4060 8GB...")
 
-        filename = f"video_{i:03d}_seed{video_seed}_{timestamp}.mp4"
-        output_path = output_dir / filename
+        # Set per-video seed
+        generator = torch.Generator(device="cuda" if not use_cpu_offload else "cpu")
+        generator.manual_seed(current_seed)
 
-        generate_video(
-            output_path=output_path,
-            duration=duration,
-            fps=fps,
-            width=width,
-            height=height,
-            seed=video_seed,
-            video_type=video_type
-        )
+        # Generate video frames using SVD
+        # decode_chunk_size controls VAE memory usage (lower = less VRAM, slower)
+        try:
+            frames = pipe(
+                conditioning_image,
+                decode_chunk_size=8,  # Process 8 frames at a time (memory optimization)
+                generator=generator,
+                num_frames=25,  # SVD-XT generates 25 frames
+                fps=7  # Frame rate for export
+            ).frames[0]
+        except Exception as e:
+            logger.error(f"Video generation failed: {e}")
+            logger.error("Try reducing decode_chunk_size or ensure GPU has enough memory")
+            continue
+
+        logger.info(f"  Generated {len(frames)} frames at 1024×576")
+
+        # Downscale frames to target resolution (512×512)
+        if target_resolution != 1024:
+            logger.info(f"  Downscaling to {target_resolution}×{target_resolution}")
+            resized_frames = []
+            for frame in frames:
+                # Convert to PIL for high-quality resize
+                resized_frame = frame.resize(
+                    (target_resolution, target_resolution),
+                    Image.Resampling.LANCZOS
+                )
+                resized_frames.append(resized_frame)
+            frames = resized_frames
+
+        # Export to MP4
+        filename_base = f"video_{i:03d}_seed{current_seed}_{timestamp}"
+        video_path = output_dir / f"{filename_base}.mp4"
+
+        export_to_video(frames, str(video_path), fps=7)
+        logger.info(f"  Saved: {video_path.name}")
 
         # Save metadata
-        import json
         metadata = {
-            "filename": filename,
-            "seed": video_seed,
-            "video_type": video_type,
-            "duration": duration,
-            "fps": fps,
-            "resolution": f"{width}x{height}",
-            "total_frames": int(duration * fps),
-            "model_package": "opencv-python",
-            "model_version": "procedural_v1",
-            "timestamp": timestamp,
-            "note": "Procedural generation; replace with diffusion model for production"
+            "filename": video_path.name,
+            "seed": current_seed,
+            "model": model_id,
+            "model_status": "PREPRINT (arXiv 2311.15127, not peer-reviewed)",
+            "native_resolution": "1024x576",
+            "output_resolution": f"{target_resolution}x{target_resolution}",
+            "num_frames": len(frames),
+            "fps": 7,
+            "duration_seconds": len(frames) / 7,
+            "conditioning_image": conditioning_images[i].filename if hasattr(conditioning_images[i], 'filename') else "N/A",
+            "generation_method": "stable_video_diffusion_img2vid",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
         }
 
-        metadata_path = output_path.with_suffix('.json')
+        metadata_path = output_dir / f"{filename_base}.json"
         with open(metadata_path, 'w') as f:
             json.dump(metadata, f, indent=2)
 
@@ -256,7 +267,7 @@ def generate_videos(output_dir: Path, count: int = 2, seed: int = 42,
 def main():
     """Main entry point with CLI argument parsing."""
     parser = argparse.ArgumentParser(
-        description="Generate deterministic test videos for C2PA testing",
+        description="Generate videos using Stable Video Diffusion (PREPRINT)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
@@ -264,6 +275,12 @@ def main():
         type=Path,
         default=Path("data/raw_videos"),
         help="Output directory for generated videos"
+    )
+    parser.add_argument(
+        "--images-dir",
+        type=Path,
+        default=Path("data/raw_images_for_video"),
+        help="Directory containing conditioning images (1024×576)"
     )
     parser.add_argument(
         "--count",
@@ -274,32 +291,14 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=100,
         help="Random seed for reproducibility"
     )
     parser.add_argument(
-        "--duration",
-        type=float,
-        default=3.0,
-        help="Video duration in seconds"
-    )
-    parser.add_argument(
-        "--fps",
+        "--resolution",
         type=int,
-        default=10,
-        help="Frames per second"
-    )
-    parser.add_argument(
-        "--width",
-        type=int,
-        default=256,
-        help="Video width in pixels"
-    )
-    parser.add_argument(
-        "--height",
-        type=int,
-        default=256,
-        help="Video height in pixels"
+        default=512,
+        help="Target output resolution (square)"
     )
 
     args = parser.parse_args()
@@ -307,15 +306,19 @@ def main():
     # Log environment
     log_environment()
 
+    # Verify conditioning images directory exists
+    if not args.images_dir.exists():
+        logger.error(f"Conditioning images directory not found: {args.images_dir}")
+        logger.error("Run generate_video_images.py first to create conditioning images")
+        sys.exit(1)
+
     # Generate videos
     generate_videos(
         output_dir=args.output_dir,
+        images_dir=args.images_dir,
         count=args.count,
         seed=args.seed,
-        duration=args.duration,
-        fps=args.fps,
-        width=args.width,
-        height=args.height
+        target_resolution=args.resolution
     )
 
 

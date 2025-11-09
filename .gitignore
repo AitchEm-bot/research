@@ -47,6 +47,9 @@ data/raw_images/*.png
 data/raw_images/*.jpg
 data/raw_images/*.jpeg
 data/raw_images/*.json
+data/raw_images_for_video/*.png
+data/raw_images_for_video/*.jpg
+data/raw_images_for_video/*.json
 data/raw_videos/*.mp4
 data/raw_videos/*.avi
 data/raw_videos/*.json
@@ -62,6 +65,7 @@ data/manifests_json/*.json
 
 # Keep directory structure but ignore contents
 !data/raw_images/.gitkeep
+!data/raw_images_for_video/.gitkeep
 !data/raw_videos/.gitkeep
 !data/manifests/.gitkeep
 !data/transformed/.gitkeep
