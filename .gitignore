@@ -58,10 +58,19 @@ data/manifests/*.jpg
 data/manifests/*.mp4
 data/manifests/*.json
 data/manifests_c2patool/
-data/transformed/
-data/metrics/
 data/manifests_json/*.json
 
+# Transformed data - ignore all asset and metadata files but keep folder structure
+data/transformed/**/*.png
+data/transformed/**/*.jpg
+data/transformed/**/*.jpeg
+data/transformed/**/*.mp4
+data/transformed/**/*.avi
+data/transformed/**/*.json
+data/transformed/**/*.log
+
+# Metrics output
+data/metrics/
 
 # Keep directory structure but ignore contents
 !data/raw_images/.gitkeep
