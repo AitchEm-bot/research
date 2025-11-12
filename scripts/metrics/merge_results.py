@@ -50,7 +50,10 @@ C2PA_CSV = Path("data/metrics/c2pa_validation.csv")
 QUALITY_CSV = Path("data/metrics/quality_metrics.csv")
 OUTPUT_CSV = Path("data/metrics/final_metrics.csv")
 
-# Final CSV column schema (matches CLAUDE.md specification)
+# Final CSV column schema (matches CLAUDE.md specification + Phase 4 enhancements)
+# New columns added for Phase 4 analysis:
+# - lossless_match: Boolean (0/1) indicating pixel-identical comparison (PSNR = inf, SSIM = 1.0)
+# - lossless_transform: Boolean (0/1) indicating mathematically lossless operation (e.g., PNG c0/c9)
 FINAL_COLUMNS = [
     'filename',
     'asset_type',
@@ -69,6 +72,8 @@ FINAL_COLUMNS = [
     'psnr',
     'ssim',
     'vmaf',
+    'lossless_match',        # NEW: Boolean flag for pixel-identical pairs
+    'lossless_transform',    # NEW: Boolean flag for mathematically lossless operations
     'c2pa_processing_time_ms',
     'quality_processing_time_ms',
     'timestamp'
@@ -229,7 +234,7 @@ def validate_dataset(df: pd.DataFrame):
 
     # Verify integer columns
     int_cols = ['manifest_present', 'verified', 'signature_valid', 'hash_match',
-                'assertion_uris_match', 'trust_verified']
+                'assertion_uris_match', 'trust_verified', 'lossless_match', 'lossless_transform']
     for col in int_cols:
         if col in df.columns:
             if df[col].dtype not in ['int64', 'Int64']:

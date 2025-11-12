@@ -58,13 +58,29 @@ TRANSFORMED_BASE_DIR = Path("data/transformed")
 MANIFESTS_DIR = Path("data/manifests")
 OUTPUT_CSV = Path("data/metrics/quality_metrics.csv")
 
+# Lossless transform mapping
+# PNG compression (both c0 and c9) uses lossless DEFLATE algorithm
+# - c0: No compression (raw pixel data)
+# - c9: Maximum compression effort (slower encoding, same pixel output)
+# Both produce pixel-identical output → PSNR = ∞, SSIM = 1.0
+LOSSLESS_TRANSFORMS = {
+    'png_c0',
+    'png_c9'
+    # Future additions: 'copy', 'metadata_only', etc.
+}
+
 # CSV Column headers
+# New columns added for Phase 4 analysis:
+# - lossless_match: Boolean (0/1) indicating pixel-identical comparison (PSNR = inf, SSIM = 1.0)
+# - lossless_transform: Boolean (0/1) indicating mathematically lossless operation (e.g., PNG c0/c9)
 CSV_HEADERS = [
     'filename',
     'asset_type',
     'psnr',
     'ssim',
     'vmaf',
+    'lossless_match',
+    'lossless_transform',
     'processing_time_ms',
     'calculation_error',
     'timestamp'
@@ -160,16 +176,25 @@ def find_original_asset(transformed_path: Path) -> Optional[Path]:
         return None
 
 
-def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tuple[Optional[float], Optional[float], Optional[str], float]:
+def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tuple[Optional[str], Optional[float], int, Optional[str], float]:
     """
     Calculate PSNR and SSIM for image pair.
+
+    Handles lossless operations correctly:
+    - PNG c0/c9 compression produces pixel-identical output
+    - When MSE = 0, PSNR = infinity (not 361.2 dB)
+    - Returns PSNR as "inf" string for perfect matches
+    - Sets lossless_match = 1 when images are pixel-identical
 
     Args:
         original_path: Path to original image
         transformed_path: Path to transformed image
 
     Returns:
-        Tuple of (psnr, ssim, error_message, processing_time_ms)
+        Tuple of (psnr, ssim, lossless_match, error_message, processing_time_ms)
+        - psnr: String ("inf") or numeric string ("45.2345")
+        - ssim: Float (0-1)
+        - lossless_match: Integer (0 or 1)
     """
     start_time = time.time()
 
@@ -181,19 +206,29 @@ def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tupl
         if img1 is None:
             error_msg = f"Failed to read original: {original_path.name}"
             elapsed_ms = (time.time() - start_time) * 1000
-            return None, None, error_msg, elapsed_ms
+            return None, None, 0, error_msg, elapsed_ms
 
         if img2 is None:
             error_msg = f"Failed to read transformed: {transformed_path.name}"
             elapsed_ms = (time.time() - start_time) * 1000
-            return None, None, error_msg, elapsed_ms
+            return None, None, 0, error_msg, elapsed_ms
 
         # Resize transformed to match original if dimensions differ
         if img1.shape != img2.shape:
             img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]), interpolation=cv2.INTER_CUBIC)
 
-        # Calculate PSNR
-        psnr = cv2.PSNR(img1, img2)
+        # Check if images are pixel-identical (lossless operation)
+        # This occurs with PNG c0/c9 compression (lossless DEFLATE algorithm)
+        lossless_match = 0
+        if np.array_equal(img1, img2):
+            # Images are pixel-identical → PSNR = infinity
+            psnr = "inf"
+            lossless_match = 1
+            logging.debug(f"{transformed_path.name}: Lossless match detected (PSNR = inf)")
+        else:
+            # Calculate PSNR for lossy operations
+            psnr_value = cv2.PSNR(img1, img2)
+            psnr = f"{psnr_value:.4f}"
 
         # Calculate SSIM (convert to grayscale)
         gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
@@ -202,22 +237,73 @@ def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tupl
 
         elapsed_ms = (time.time() - start_time) * 1000
 
-        return psnr, ssim, None, elapsed_ms
+        return psnr, ssim, lossless_match, None, elapsed_ms
 
     except Exception as e:
         elapsed_ms = (time.time() - start_time) * 1000
         error_msg = f"Image metrics error: {str(e)}"
         logging.error(f"{transformed_path.name}: {error_msg}")
-        return None, None, error_msg, elapsed_ms
+        return None, None, 0, error_msg, elapsed_ms
+
+
+def get_video_properties(video_path: Path) -> Optional[Tuple[int, int, str]]:
+    """
+    Extract video dimensions and frame rate using ffprobe.
+
+    Args:
+        video_path: Path to video file
+
+    Returns:
+        Tuple of (width, height, fps_string) or None if extraction fails
+    """
+    try:
+        cmd = [
+            'ffprobe',
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height,r_frame_rate',
+            '-of', 'csv=p=0',
+            str(video_path)
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=True)
+        output = result.stdout.strip()
+
+        # Parse output: "width,height,fps_num/fps_den"
+        parts = output.split(',')
+        if len(parts) >= 3:
+            width = int(parts[0])
+            height = int(parts[1])
+            fps = parts[2]
+            return width, height, fps
+        else:
+            logging.error(f"Failed to parse ffprobe output: {output}")
+            return None
+
+    except Exception as e:
+        logging.error(f"ffprobe failed for {video_path.name}: {e}")
+        return None
 
 
 def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[Optional[float], Optional[str], float]:
     """
     Calculate VMAF score for video pair using ffmpeg.
 
+    Handles dimension mismatches correctly:
+    - Uses ffprobe to detect video dimensions and frame rate
+    - Normalizes distorted video to match reference dimensions/fps before VMAF
+    - Applies Lanczos scaling for high-quality resize
+    - Ensures consistent pixel format (yuv420p)
+    - This fixes missing VMAF scores for crop/resize operations (~18 videos)
+
+    VMAF requires pixel-by-pixel comparison, so videos must have identical:
+    - Width × Height (normalized via scale filter)
+    - Frame rate (normalized via fps filter)
+    - Pixel format (normalized via format filter)
+
     Args:
-        original_path: Path to original video
-        transformed_path: Path to transformed video
+        original_path: Path to original (reference) video
+        transformed_path: Path to transformed (distorted) video
 
     Returns:
         Tuple of (vmaf_score, error_message, processing_time_ms)
@@ -225,12 +311,45 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
     start_time = time.time()
 
     try:
+        # Get video properties for both files
+        ref_props = get_video_properties(original_path)
+        dist_props = get_video_properties(transformed_path)
+
+        if ref_props is None or dist_props is None:
+            elapsed_ms = (time.time() - start_time) * 1000
+            error_msg = "Failed to extract video properties with ffprobe"
+            logging.error(f"{transformed_path.name}: {error_msg}")
+            return None, error_msg, elapsed_ms
+
+        ref_width, ref_height, ref_fps = ref_props
+        dist_width, dist_height, dist_fps = dist_props
+
+        # Build filter chain with dimension/fps normalization
+        # Normalize distorted video to match reference dimensions and fps
+        if (dist_width != ref_width or dist_height != ref_height or dist_fps != ref_fps):
+            # Dimension or FPS mismatch - need to normalize
+            logging.debug(f"{transformed_path.name}: Normalizing {dist_width}x{dist_height}@{dist_fps} → {ref_width}x{ref_height}@{ref_fps}")
+
+            filter_chain = (
+                f"[0:v]scale={ref_width}:{ref_height}:flags=lanczos,"
+                f"fps={ref_fps},format=yuv420p,setpts=PTS-STARTPTS[dist];"
+                f"[1:v]format=yuv420p,setpts=PTS-STARTPTS[ref];"
+                f"[dist][ref]libvmaf=log_fmt=json:log_path=NUL"
+            )
+        else:
+            # Dimensions and FPS match - standard VMAF
+            filter_chain = (
+                "[0:v]format=yuv420p,setpts=PTS-STARTPTS[dist];"
+                "[1:v]format=yuv420p,setpts=PTS-STARTPTS[ref];"
+                "[dist][ref]libvmaf=log_fmt=json:log_path=NUL"
+            )
+
         # ffmpeg command with libvmaf filter
         cmd = [
             'ffmpeg',
-            '-i', str(transformed_path),  # Distorted video
-            '-i', str(original_path),      # Reference video
-            '-lavfi', '[0:v]setpts=PTS-STARTPTS[dist];[1:v]setpts=PTS-STARTPTS[ref];[dist][ref]libvmaf=log_fmt=json:log_path=NUL',
+            '-i', str(transformed_path),  # Distorted video (input 0)
+            '-i', str(original_path),      # Reference video (input 1)
+            '-lavfi', filter_chain,
             '-f', 'null', '-'
         ]
 
@@ -260,6 +379,7 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
             else:
                 error_msg = "VMAF score not found in ffmpeg output"
                 logging.error(f"{transformed_path.name}: {error_msg}")
+                logging.debug(f"ffmpeg stderr: {result.stderr[:500]}")  # Log first 500 chars for debugging
                 return None, error_msg, elapsed_ms
 
     except subprocess.TimeoutExpired:
@@ -283,6 +403,12 @@ def process_single_asset(transformed_path: Path) -> Dict:
     """
     Calculate metrics for single asset.
 
+    Detects lossless transforms by parsing filename for transform type.
+    Examples:
+    - img_000_seed42_20251109_220519_png_c9.png → lossless_transform = 1
+    - img_000_seed42_20251109_220519_jpeg_q95.jpg → lossless_transform = 0
+    - video_000_seed100_20251109_231519_h264_bitrate5000k.mp4 → lossless_transform = 0
+
     Args:
         transformed_path: Path to transformed asset
 
@@ -292,6 +418,14 @@ def process_single_asset(transformed_path: Path) -> Dict:
     # Find original asset
     original_path = find_original_asset(transformed_path)
 
+    # Detect lossless transform from filename
+    filename = transformed_path.name
+    lossless_transform = 0
+    for transform_key in LOSSLESS_TRANSFORMS:
+        if transform_key in filename:
+            lossless_transform = 1
+            break
+
     if original_path is None:
         return {
             'filename': transformed_path.name,
@@ -299,6 +433,8 @@ def process_single_asset(transformed_path: Path) -> Dict:
             'psnr': '',
             'ssim': '',
             'vmaf': '',
+            'lossless_match': '0',
+            'lossless_transform': str(lossless_transform),
             'processing_time_ms': '0.00',
             'calculation_error': 'original_not_found',
             'timestamp': datetime.now().isoformat()
@@ -308,14 +444,16 @@ def process_single_asset(transformed_path: Path) -> Dict:
     asset_type = 'image' if transformed_path.suffix.lower() in ['.png', '.jpg', '.jpeg'] else 'video'
 
     if asset_type == 'image':
-        psnr, ssim, error, proc_time = calculate_image_metrics(original_path, transformed_path)
+        psnr, ssim, lossless_match, error, proc_time = calculate_image_metrics(original_path, transformed_path)
 
         return {
             'filename': transformed_path.name,
             'asset_type': 'image',
-            'psnr': f"{psnr:.4f}" if psnr is not None else '',
+            'psnr': psnr if psnr is not None else '',
             'ssim': f"{ssim:.6f}" if ssim is not None else '',
             'vmaf': '',  # Not applicable for images
+            'lossless_match': str(lossless_match),
+            'lossless_transform': str(lossless_transform),
             'processing_time_ms': f"{proc_time:.2f}",
             'calculation_error': error if error else '',
             'timestamp': datetime.now().isoformat()
@@ -329,6 +467,8 @@ def process_single_asset(transformed_path: Path) -> Dict:
             'psnr': '',  # Not applicable for videos
             'ssim': '',  # Not applicable for videos
             'vmaf': f"{vmaf:.4f}" if vmaf is not None else '',
+            'lossless_match': '0',  # Not applicable for videos (always lossy)
+            'lossless_transform': str(lossless_transform),
             'processing_time_ms': f"{proc_time:.2f}",
             'calculation_error': error if error else '',
             'timestamp': datetime.now().isoformat()
