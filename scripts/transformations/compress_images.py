@@ -41,7 +41,7 @@ logging.basicConfig(
 )
 
 # Configuration
-INPUT_DIR = Path("data/manifests")
+INPUT_DIR = Path("data/manifests/images")  # Updated: organized manifest structure
 OUTPUT_BASE_DIR = Path("data/transformed/compression/images")
 JPEG_QUALITIES = [95, 75, 50, 25]
 PNG_COMPRESS_LEVELS = [9, 0]  # 9 = max compression, 0 = no compression

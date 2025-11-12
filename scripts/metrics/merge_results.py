@@ -3,11 +3,12 @@ Results Merge Script for C2PA Robustness Testing
 =================================================
 
 This script merges C2PA verification results and quality metrics into a
-single comprehensive dataset for analysis.
+single comprehensive dataset for analysis. Supports Phase 2.5 platform results.
 
 Input CSVs:
 - data/metrics/c2pa_validation.csv (C2PA verification flags and metadata)
 - data/metrics/quality_metrics.csv (PSNR/SSIM/VMAF scores)
+- data/results/platform_results.csv (Phase 2.5 platform round-trip results, optional)
 
 Output CSV:
 - data/metrics/final_metrics.csv (complete dataset matching CLAUDE.md schema)
@@ -15,6 +16,7 @@ Output CSV:
 Features:
 - Merges on filename (primary key)
 - Preserves all metadata columns (seed, model_version, transform details)
+- Appends platform results if available (Phase 2.5)
 - Validates column types and completeness
 - Reports missing or mismatched rows
 
@@ -22,7 +24,7 @@ Usage:
     python scripts/metrics/merge_results.py
 
 Output:
-    data/metrics/final_metrics.csv (304 rows expected)
+    data/metrics/final_metrics.csv (304+ rows depending on platform testing)
 """
 
 import csv
@@ -48,12 +50,19 @@ logging.basicConfig(
 # Configuration
 C2PA_CSV = Path("data/metrics/c2pa_validation.csv")
 QUALITY_CSV = Path("data/metrics/quality_metrics.csv")
+PLATFORM_CSV = Path("data/results/platform_results.csv")  # Phase 2.5 optional input
 OUTPUT_CSV = Path("data/metrics/final_metrics.csv")
 
-# Final CSV column schema (matches CLAUDE.md specification + Phase 4 enhancements)
-# New columns added for Phase 4 analysis:
+# Final CSV column schema (matches CLAUDE.md specification + Phase 2.5/4 enhancements)
+# Phase 4 additions:
 # - lossless_match: Boolean (0/1) indicating pixel-identical comparison (PSNR = inf, SSIM = 1.0)
 # - lossless_transform: Boolean (0/1) indicating mathematically lossless operation (e.g., PNG c0/c9)
+# Phase 2.5 additions (optional, only present if platform testing performed):
+# - platform: Platform name (instagram, twitter, etc.)
+# - platform_mode: Upload mode (video, image, story, reel, etc.)
+# - video_source: Video origin (internal, external_sora, external_runway, etc.)
+# - upload_timestamp: ISO 8601 timestamp
+# - download_timestamp: ISO 8601 timestamp
 FINAL_COLUMNS = [
     'filename',
     'asset_type',
@@ -72,11 +81,17 @@ FINAL_COLUMNS = [
     'psnr',
     'ssim',
     'vmaf',
-    'lossless_match',        # NEW: Boolean flag for pixel-identical pairs
-    'lossless_transform',    # NEW: Boolean flag for mathematically lossless operations
+    'lossless_match',        # Phase 4: Boolean flag for pixel-identical pairs
+    'lossless_transform',    # Phase 4: Boolean flag for mathematically lossless operations
     'c2pa_processing_time_ms',
     'quality_processing_time_ms',
-    'timestamp'
+    'timestamp',
+    # Phase 2.5 optional columns (only if platform testing performed)
+    'platform',
+    'platform_mode',
+    'video_source',
+    'upload_timestamp',
+    'download_timestamp'
 ]
 
 
@@ -178,6 +193,23 @@ def merge_datasets(c2pa_df: pd.DataFrame, quality_df: pd.DataFrame) -> pd.DataFr
     return merged
 
 
+def load_platform_data() -> pd.DataFrame:
+    """
+    Load Phase 2.5 platform results data (optional).
+
+    Returns:
+        DataFrame with platform results, or empty DataFrame if not available
+    """
+    if not PLATFORM_CSV.exists():
+        logging.info("Platform results CSV not found - skipping platform data (Phase 2.5 not performed)")
+        return pd.DataFrame()
+
+    df = pd.read_csv(PLATFORM_CSV)
+    logging.info(f"Loaded platform results data: {len(df)} rows")
+
+    return df
+
+
 def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Reorder columns to match final schema.
@@ -193,7 +225,7 @@ def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
     missing_cols = [col for col in FINAL_COLUMNS if col not in df.columns]
 
     if missing_cols:
-        logging.warning(f"Missing columns in final dataset: {missing_cols}")
+        logging.info(f"Columns not present in dataset: {missing_cols}")
 
     # Reorder available columns
     df = df[available_cols]
@@ -280,12 +312,38 @@ def main():
     # Load datasets
     c2pa_df = load_c2pa_data()
     quality_df = load_quality_data()
+    platform_df = load_platform_data()  # Phase 2.5 optional
 
-    # Merge
+    # Merge core datasets
     merged_df = merge_datasets(c2pa_df, quality_df)
 
+    # Append platform results if available (Phase 2.5)
+    if not platform_df.empty:
+        logging.info("Appending platform results to merged dataset...")
+
+        # Ensure platform results have all required columns
+        # Add missing columns with default values
+        for col in FINAL_COLUMNS:
+            if col not in platform_df.columns:
+                if col in ['platform', 'platform_mode', 'video_source', 'upload_timestamp', 'download_timestamp']:
+                    # Platform-specific columns can be missing in core data
+                    merged_df[col] = ''
+                # Otherwise already exists in merged_df
+
+        # Add platform-specific columns to merged_df if not present
+        for col in ['platform', 'platform_mode', 'video_source', 'upload_timestamp', 'download_timestamp']:
+            if col not in merged_df.columns:
+                merged_df[col] = ''
+
+        # Append platform results
+        combined_df = pd.concat([merged_df, platform_df], ignore_index=True)
+        logging.info(f"Combined dataset: {len(combined_df)} rows ({len(merged_df)} core + {len(platform_df)} platform)")
+        final_df = combined_df
+    else:
+        final_df = merged_df
+
     # Reorder columns
-    final_df = reorder_columns(merged_df)
+    final_df = reorder_columns(final_df)
 
     # Validate
     validate_dataset(final_df)
@@ -297,7 +355,10 @@ def main():
     # Summary
     logging.info("=" * 60)
     logging.info("Merge Complete")
-    logging.info(f"  Input: {len(c2pa_df)} C2PA rows + {len(quality_df)} quality rows")
+    if platform_df.empty:
+        logging.info(f"  Input: {len(c2pa_df)} C2PA rows + {len(quality_df)} quality rows")
+    else:
+        logging.info(f"  Input: {len(c2pa_df)} C2PA rows + {len(quality_df)} quality rows + {len(platform_df)} platform rows")
     logging.info(f"  Output: {len(final_df)} merged rows")
     logging.info(f"  Columns: {len(final_df.columns)}")
     logging.info("=" * 60)

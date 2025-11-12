@@ -261,6 +261,103 @@ Get-Content data\manifests\img_000_seed42_*_manifest.json | Select-Object -First
   - Signature info (test keys only)
   - Asset metadata (seed, model version, etc.)
 
+## External Video Support (Optional)
+
+The pipeline supports testing external AI-generated videos from platforms like Sora 2, Runway, Pika, etc.
+
+### Adding External Videos
+
+1. **Place videos** in `data/raw_out_videos/`
+   - Supported formats: .mp4, .mov, .avi
+   - Minimum resolution: 256×256 pixels
+   - Minimum duration: 1 second
+   - Maximum file size: 500 MB (recommended)
+
+2. **Prepare videos** for testing:
+   ```bash
+   python scripts/external/prepare_external_videos.py
+   ```
+
+   This script will:
+   - Check if videos already have C2PA manifests
+   - If signed: preserve original manifest
+   - If unsigned: sign with test certificate
+   - Move to `data/manifests/videos/external/`
+
+3. **Automatic integration**
+   - External videos are automatically included in transformation pipeline
+   - Results are merged into `final_metrics.csv` with video_source tracking
+   - Enables comparative analysis between different AI platforms
+
+### Supported External Sources
+
+- OpenAI Sora 2
+- Runway Gen-3
+- Pika Labs
+- Synthesia
+- Any other AI video generation platform
+
+See `data/raw_out_videos/README.md` for detailed instructions.
+
+## Phase 2.5: Social Media Platform Testing
+
+Test C2PA manifest persistence through real-world social media platforms.
+
+### Supported Platforms
+
+- **Instagram**: video, image, story, reel
+- **Twitter**: video, image
+- **Facebook**: video, image
+- **YouTube Shorts**: video
+- **TikTok**: video
+- **WhatsApp**: video, image, status
+
+### Workflow
+
+1. **Prepare uploads**:
+   ```bash
+   python scripts/platform/prepare_platform_uploads.py
+   ```
+   - Interactive menu to select assets
+   - Choose platform and upload mode
+   - Verifies C2PA signature before upload
+   - Generates upload instructions
+
+2. **Manual upload**:
+   - Upload assets to platform via mobile/web app
+   - No filters or editing applied
+
+3. **Manual download**:
+   - Download assets from platform
+   - Save to `data/platform_tests/{platform}/returned/`
+   - Follow naming convention: `{original}__{platform}__{mode}__{timestamp}.{ext}`
+
+4. **Log metadata**:
+   - Record upload/download timestamps in `data/platform_tests/platform_manifest.csv`
+   - Use provided CSV template
+
+5. **Process returns**:
+   ```bash
+   python scripts/platform/process_platform_returns.py
+   ```
+   - Verifies C2PA signatures
+   - Calculates quality metrics (PSNR, SSIM, VMAF)
+   - Generates `data/results/platform_results.csv`
+
+6. **Merge with final results**:
+   ```bash
+   python scripts/metrics/merge_results.py
+   ```
+   - Appends platform results to `final_metrics.csv`
+
+### Expected Outcomes
+
+- Most platforms STRIP C2PA manifests during transcoding
+- Quality degradation varies by platform compression policies
+- Results inform real-world C2PA persistence analysis
+
+See `data/platform_tests/README_PHASE_2.5.md` for detailed instructions.
+
 ## Next Steps
 
 After completing the smoke test, the following phases will be implemented:

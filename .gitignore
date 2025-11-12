@@ -53,10 +53,21 @@ data/raw_images_for_video/*.json
 data/raw_videos/*.mp4
 data/raw_videos/*.avi
 data/raw_videos/*.json
-data/manifests/*.png
-data/manifests/*.jpg
-data/manifests/*.mp4
-data/manifests/*.json
+
+# External videos (large files, user-provided - Sora, Runway, etc.)
+data/raw_out_videos/*.mp4
+data/raw_out_videos/*.mov
+data/raw_out_videos/*.avi
+data/raw_out_videos/*.json
+
+# Signed manifests - organized structure
+data/manifests/images/*.png
+data/manifests/images/*.jpg
+data/manifests/images/*.json
+data/manifests/videos/internal/*.mp4
+data/manifests/videos/internal/*.json
+data/manifests/videos/external/*.mp4
+data/manifests/videos/external/*.json
 data/manifests_c2patool/
 data/manifests_json/*.json
 
@@ -72,14 +83,31 @@ data/transformed/**/*.log
 # Metrics output
 data/metrics/
 
+# Platform tests (Phase 2.5) - ignore user uploads/downloads but keep structure
+data/platform_tests/**/uploads/*.png
+data/platform_tests/**/uploads/*.jpg
+data/platform_tests/**/uploads/*.mp4
+data/platform_tests/**/returned/*.png
+data/platform_tests/**/returned/*.jpg
+data/platform_tests/**/returned/*.mp4
+data/platform_tests/**/returned/*.json
+data/platform_tests/platform_manifest.csv
+
 # Keep directory structure but ignore contents
 !data/raw_images/.gitkeep
 !data/raw_images_for_video/.gitkeep
 !data/raw_videos/.gitkeep
-!data/manifests/.gitkeep
+!data/raw_out_videos/.gitkeep
+!data/raw_out_videos/README.md
+!data/manifests/images/.gitkeep
+!data/manifests/videos/internal/.gitkeep
+!data/manifests/videos/external/.gitkeep
 !data/transformed/.gitkeep
 !data/metrics/.gitkeep
 !data/manifests_json/.gitkeep
+!data/platform_tests/**/.gitkeep
+!data/platform_tests/README_PHASE_2.5.md
+!data/platform_tests/platform_manifest_TEMPLATE.csv
 
 # Results & Outputs
 results/
@@ -106,7 +134,8 @@ nul
 
 # Claude Code
 .claude/
-CONVERSATION.md
+PHASES.md
+PHASE4.md
 claude_verification_prompt.txt
 CLAUDE.md
 

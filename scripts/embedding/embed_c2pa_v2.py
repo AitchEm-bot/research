@@ -342,13 +342,22 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
     """
     Process all images and videos, creating and embedding C2PA manifests using c2patool.
 
+    Uses organized output structure:
+    - Images → output_dir/images/
+    - Videos (internal) → output_dir/videos/internal/
+
     Args:
         images_dir: Directory containing raw images
         videos_dir: Directory containing raw videos
-        output_dir: Directory to save signed assets
+        output_dir: Base directory for signed assets (organized subfolders created automatically)
         verify: Whether to verify signatures after signing
     """
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # Create organized folder structure
+    images_output_dir = output_dir / "images"
+    videos_output_dir = output_dir / "videos" / "internal"
+
+    images_output_dir.mkdir(parents=True, exist_ok=True)
+    videos_output_dir.mkdir(parents=True, exist_ok=True)
 
     total_processed = 0
     total_failed = 0
@@ -374,8 +383,8 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
             # Create manifest
             manifest = create_manifest_json(img_path, "image", seed)
 
-            # Output path for signed image
-            signed_path = output_dir / f"{img_path.stem}_signed{img_path.suffix}"
+            # Output path for signed image (organized: images/)
+            signed_path = images_output_dir / f"{img_path.stem}_signed{img_path.suffix}"
 
             # Sign the image using c2patool
             success = sign_asset_with_c2patool(img_path, signed_path, manifest)
@@ -412,8 +421,8 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
             # Create manifest
             manifest = create_manifest_json(vid_path, "video", seed)
 
-            # Output path for signed video
-            signed_path = output_dir / f"{vid_path.stem}_signed{vid_path.suffix}"
+            # Output path for signed video (organized: videos/internal/)
+            signed_path = videos_output_dir / f"{vid_path.stem}_signed{vid_path.suffix}"
 
             # Sign the video using c2patool
             success = sign_asset_with_c2patool(vid_path, signed_path, manifest)
@@ -435,7 +444,8 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
     logger.info(f"  Processed: {total_processed}")
     logger.info(f"  Failed: {total_failed}")
     logger.info(f"  Verified (integrity): {total_verified}")
-    logger.info(f"  Output directory: {output_dir}")
+    logger.info(f"  Images output: {images_output_dir}")
+    logger.info(f"  Videos output: {videos_output_dir}")
     logger.info("=" * 60)
 
 

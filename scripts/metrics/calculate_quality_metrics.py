@@ -55,7 +55,12 @@ logging.basicConfig(
 
 # Configuration
 TRANSFORMED_BASE_DIR = Path("data/transformed")
-MANIFESTS_DIR = Path("data/manifests")
+# Updated: organized manifest structure
+MANIFESTS_IMAGES_DIR = Path("data/manifests/images")
+MANIFESTS_VIDEOS_DIRS = [
+    Path("data/manifests/videos/internal"),
+    Path("data/manifests/videos/external")
+]
 OUTPUT_CSV = Path("data/metrics/quality_metrics.csv")
 
 # Lossless transform mapping
@@ -164,16 +169,20 @@ def find_original_asset(transformed_path: Path) -> Optional[Path]:
     # Images: .png, Videos: .mp4
     if transformed_path.suffix.lower() in ['.png', '.jpg', '.jpeg']:
         original_filename = f"{base}_signed.png"
+        # Search in images directory
+        original_path = MANIFESTS_IMAGES_DIR / original_filename
+        if original_path.exists():
+            return original_path
     else:
         original_filename = f"{base}_signed.mp4"
+        # Search in both video directories (internal and external)
+        for video_dir in MANIFESTS_VIDEOS_DIRS:
+            original_path = video_dir / original_filename
+            if original_path.exists():
+                return original_path
 
-    original_path = MANIFESTS_DIR / original_filename
-
-    if original_path.exists():
-        return original_path
-    else:
-        logging.warning(f"Original not found for {filename}: expected {original_filename}")
-        return None
+    logging.warning(f"Original not found for {filename}: expected {original_filename}")
+    return None
 
 
 def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tuple[Optional[str], Optional[float], int, Optional[str], float]:

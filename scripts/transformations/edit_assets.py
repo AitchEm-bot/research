@@ -46,7 +46,12 @@ logging.basicConfig(
 )
 
 # Configuration
-INPUT_DIR = Path("data/manifests")
+# Updated: organized manifest structure
+IMAGES_INPUT_DIR = Path("data/manifests/images")
+VIDEOS_INPUT_DIRS = [
+    Path("data/manifests/videos/internal"),
+    Path("data/manifests/videos/external")
+]
 OUTPUT_BASE_DIR = Path("data/transformed/editing")
 
 CROP_PERCENTAGES = [90, 75, 50]  # Percentage of original size to keep
@@ -365,10 +370,10 @@ def adjust_color_video(video_path: Path, adjustment_type: Literal['brightness', 
 
 def process_images(test_mode: bool = False):
     """Process all signed images with editing transformations."""
-    signed_images = sorted(INPUT_DIR.glob("*_signed.png"))
+    signed_images = sorted(IMAGES_INPUT_DIR.glob("*_signed.png"))
 
     if not signed_images:
-        logging.info("No signed images found")
+        logging.info(f"No signed images found in {IMAGES_INPUT_DIR}")
         return {'total': 0}
 
     if test_mode:
@@ -440,10 +445,14 @@ def process_images(test_mode: bool = False):
 
 def process_videos(test_mode: bool = False):
     """Process all signed videos with editing transformations."""
-    signed_videos = sorted(INPUT_DIR.glob("*_signed.mp4"))
+    # Collect videos from both internal and external sources
+    signed_videos = []
+    for input_dir in VIDEOS_INPUT_DIRS:
+        if input_dir.exists():
+            signed_videos.extend(sorted(input_dir.glob("*_signed.mp4")))
 
     if not signed_videos:
-        logging.info("No signed videos found")
+        logging.info(f"No signed videos found in {VIDEOS_INPUT_DIRS}")
         return {'total': 0}
 
     if test_mode:

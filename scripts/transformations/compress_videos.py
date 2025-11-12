@@ -43,7 +43,11 @@ logging.basicConfig(
 )
 
 # Configuration
-INPUT_DIR = Path("data/manifests")
+# Updated: scan both internal and external video sources
+INPUT_DIRS = [
+    Path("data/manifests/videos/internal"),
+    Path("data/manifests/videos/external")
+]
 OUTPUT_BASE_DIR = Path("data/transformed/compression/videos")
 H264_BITRATES = ['5000k', '2000k', '500k']
 H265_BITRATES = ['2000k', '500k']
@@ -258,11 +262,15 @@ def process_videos(test_mode: bool = False):
     Args:
         test_mode: If True, process only first video (smoke test)
     """
-    # Find all signed MP4 videos
-    signed_videos = sorted(INPUT_DIR.glob("*_signed.mp4"))
+    # Find all signed MP4 videos from both internal and external sources
+    signed_videos = []
+    for input_dir in INPUT_DIRS:
+        if input_dir.exists():
+            signed_videos.extend(sorted(input_dir.glob("*_signed.mp4")))
+            logging.info(f"Found {len(list(input_dir.glob('*_signed.mp4')))} videos in {input_dir}")
 
     if not signed_videos:
-        logging.error(f"No signed videos found in {INPUT_DIR}")
+        logging.error(f"No signed videos found in {INPUT_DIRS}")
         return
 
     if test_mode:
