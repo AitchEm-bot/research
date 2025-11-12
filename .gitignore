@@ -55,10 +55,11 @@ data/raw_videos/*.avi
 data/raw_videos/*.json
 
 # External videos (large files, user-provided - Sora, Runway, etc.)
-data/raw_out_videos/*.mp4
+# data/raw_out_videos/*.mp4
 data/raw_out_videos/*.mov
 data/raw_out_videos/*.avi
 data/raw_out_videos/*.json
+data/raw_out_videos/prompts.md
 
 # Signed manifests - organized structure
 data/manifests/images/*.png
