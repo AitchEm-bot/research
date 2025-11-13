@@ -121,21 +121,21 @@ def extract_metadata_from_filename(filename: str) -> Dict[str, str]:
         'transform_level': 'unknown'
     }
 
-    # Extract seed (seedXX pattern)
-    seed_match = re.search(r'seed(\d+)', filename)
-    if seed_match:
-        metadata['seed'] = seed_match.group(1)
+    # Check if this is an external video (video_N pattern without "seed" in filename)
+    if re.match(r'video_\d+', filename) and 'seed' not in filename:
+        metadata['model_version'] = 'External'
+        metadata['seed'] = 'unknown'
+    else:
+        # Extract seed (seedXX pattern)
+        seed_match = re.search(r'seed(\d+)', filename)
+        if seed_match:
+            metadata['seed'] = seed_match.group(1)
 
-    # Determine model version based on filename prefix and seed range
-    if filename.startswith('img_'):
-        metadata['model_version'] = 'sd-v1.4'
-    elif filename.startswith('video_'):
-        seed = int(metadata['seed']) if metadata['seed'].isdigit() else 0
-        # Legacy videos: seed 4 (actually seed42 for images converted to video)
-        # SVD videos: seed 100-101
-        if seed in [4, 42, 43]:
-            metadata['model_version'] = 'sd-v1.4-legacy-video'
-        else:
+        # Determine model version based on filename prefix
+        if filename.startswith('img_'):
+            metadata['model_version'] = 'sd-v1.4'
+        elif filename.startswith('video_'):
+            # All internal videos are SVD (legacy support removed)
             metadata['model_version'] = 'svd-xt'
 
     # Extract transform type and level from filename suffix

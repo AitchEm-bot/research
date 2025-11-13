@@ -443,8 +443,13 @@ def process_images(test_mode: bool = False):
     return stats
 
 
-def process_videos(test_mode: bool = False):
-    """Process all signed videos with editing transformations."""
+def process_videos(test_mode: bool = False, external_only: bool = False):
+    """Process all signed videos with editing transformations.
+
+    Args:
+        test_mode: If True, process only first video (smoke test)
+        external_only: If True with test_mode, process only external videos
+    """
     # Collect videos from both internal and external sources
     signed_videos = []
     for input_dir in VIDEOS_INPUT_DIRS:
@@ -456,9 +461,16 @@ def process_videos(test_mode: bool = False):
         return {'total': 0}
 
     if test_mode:
-        # Prefer legacy video for speed
-        legacy = [v for v in signed_videos if 'seed4' in v.name]
-        signed_videos = (legacy[:1] if legacy else signed_videos[:1])
+        if external_only:
+            # Test mode with external-only: select first external video
+            external_videos = [v for v in signed_videos if v.parent.name == 'external']
+            signed_videos = external_videos[:1] if external_videos else []
+            if not signed_videos:
+                logging.error("No external videos found for --external-only test")
+                return {'total': 0}
+        else:
+            # Test mode default: select first video (legacy preference removed)
+            signed_videos = signed_videos[:1]
 
     logging.info(f"Processing {len(signed_videos)} video(s)")
 
@@ -539,6 +551,7 @@ def main():
 
     # Parse arguments
     test_mode = '--test' in sys.argv
+    external_only = '--external-only' in sys.argv
     images_only = '--images-only' in sys.argv
     videos_only = '--videos-only' in sys.argv
 
@@ -553,7 +566,7 @@ def main():
         image_stats = process_images(test_mode=test_mode)
 
     if not images_only and ffmpeg_available:
-        video_stats = process_videos(test_mode=test_mode)
+        video_stats = process_videos(test_mode=test_mode, external_only=external_only)
 
     # Print summary
     logging.info("=" * 60)

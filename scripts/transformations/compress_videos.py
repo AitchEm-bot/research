@@ -255,12 +255,13 @@ def save_metadata(output_path: Path, source_path: Path, transform_type: str, par
         logging.warning(f"Failed to save metadata for {output_path.name}: {e}")
 
 
-def process_videos(test_mode: bool = False):
+def process_videos(test_mode: bool = False, external_only: bool = False):
     """
     Process all signed videos with compression transformations.
 
     Args:
         test_mode: If True, process only first video (smoke test)
+        external_only: If True with test_mode, process only external videos
     """
     # Find all signed MP4 videos from both internal and external sources
     signed_videos = []
@@ -274,13 +275,19 @@ def process_videos(test_mode: bool = False):
         return
 
     if test_mode:
-        # For test mode, prefer legacy video (faster processing)
-        legacy_videos = [v for v in signed_videos if 'seed4' in v.name]
-        if legacy_videos:
-            signed_videos = legacy_videos[:1]
+        if external_only:
+            # Test mode with external-only: select first external video
+            external_videos = [v for v in signed_videos if v.parent.name == 'external']
+            if external_videos:
+                signed_videos = external_videos[:1]
+                logging.info("TEST MODE: Processing first external video")
+            else:
+                logging.error("No external videos found for --external-only test")
+                return
         else:
+            # Test mode default: select first video (legacy preference removed)
             signed_videos = signed_videos[:1]
-        logging.info("TEST MODE: Processing only first video")
+            logging.info("TEST MODE: Processing only first video")
 
     logging.info(f"Found {len(signed_videos)} signed video(s) to process")
     logging.info(f"H.264 bitrates: {H264_BITRATES}")
@@ -392,9 +399,10 @@ def main():
 
     # Check for test mode flag
     test_mode = '--test' in sys.argv
+    external_only = '--external-only' in sys.argv
 
     # Process videos
-    process_videos(test_mode=test_mode)
+    process_videos(test_mode=test_mode, external_only=external_only)
 
 
 if __name__ == "__main__":

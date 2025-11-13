@@ -57,6 +57,7 @@ OUTPUT_DIR = Path("data/manifests/videos/external")
 SUPPORTED_EXTENSIONS = ['.mp4', '.mov', '.avi']
 
 # C2PA configuration (reused from embed_c2pa_v2.py)
+C2PATOOL_PATH = Path("tools/c2patool/c2patool/c2patool.exe")
 C2PATOOL_VERSION_REQUIRED = "0.24.0"
 
 # Manifest template for external videos
@@ -88,7 +89,7 @@ def check_c2patool() -> Tuple[bool, str]:
     """
     try:
         result = subprocess.run(
-            ['c2patool', '--version'],
+            [str(C2PATOOL_PATH), '--version'],
             capture_output=True,
             text=True,
             check=True,
@@ -123,9 +124,8 @@ def check_video_signature(video_path: Path) -> Tuple[bool, Optional[Dict]]:
     """
     try:
         cmd = [
-            'c2patool',
-            str(video_path),
-            '--output', 'json'
+            str(C2PATOOL_PATH),
+            str(video_path)
         ]
 
         result = subprocess.run(
@@ -135,12 +135,17 @@ def check_video_signature(video_path: Path) -> Tuple[bool, Optional[Dict]]:
             timeout=60
         )
 
-        # c2patool returns 0 for signed, non-zero for unsigned
-        if result.returncode == 0:
+        # c2patool returns 0 and outputs JSON for signed assets
+        if result.returncode == 0 and result.stdout.strip():
             try:
                 manifest_data = json.loads(result.stdout)
-                logging.debug(f"{video_path.name}: Already signed")
-                return True, manifest_data
+                # Check if active_manifest exists
+                if 'active_manifest' in manifest_data:
+                    logging.debug(f"{video_path.name}: Already signed")
+                    return True, manifest_data
+                else:
+                    logging.debug(f"{video_path.name}: No active manifest")
+                    return False, None
             except json.JSONDecodeError:
                 logging.warning(f"{video_path.name}: Signature check returned invalid JSON")
                 return False, None
@@ -180,7 +185,7 @@ def sign_video(video_path: Path, output_path: Path) -> Tuple[bool, Optional[str]
         # Build c2patool command
         # Uses built-in ES256 test certificate (no --certs or --private-key needed)
         cmd = [
-            'c2patool',
+            str(C2PATOOL_PATH),
             str(video_path),
             '--manifest', str(manifest_path),
             '--output', str(output_path),
@@ -362,7 +367,7 @@ def process_external_videos(test_mode: bool = False):
             # Copy to external manifests folder
             try:
                 shutil.copy2(video_path, output_path)
-                logging.info(f"  Moved to: {output_path.relative_to(Path.cwd())}")
+                logging.info(f"  Moved to: {output_path}")
 
                 # Save metadata
                 video_info = {
@@ -389,7 +394,7 @@ def process_external_videos(test_mode: bool = False):
 
             if success:
                 stats['newly_signed'] += 1
-                logging.info(f"  Signed and moved to: {output_path.relative_to(Path.cwd())}")
+                logging.info(f"  Signed and moved to: {output_path}")
 
                 # Save metadata
                 video_info = {

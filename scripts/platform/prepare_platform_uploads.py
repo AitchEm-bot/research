@@ -451,8 +451,185 @@ def prepare_upload(asset_path: Path, platform: str, mode: str) -> bool:
         return False
 
 
+def auto_sample_uploads() -> bool:
+    """
+    Automatically sample and prepare uploads for all platforms.
+
+    Distribution:
+    - Instagram: 25 images + 10 videos
+    - Twitter: 25 images + 10 videos
+    - Facebook: 25 images + 10 videos
+    - WhatsApp: 25 images + 10 videos
+    - YouTube Shorts: 0 images + 10 videos
+    - TikTok: 0 images + 10 videos
+
+    Total: 100 images, 60 videos
+
+    Returns:
+        Success status
+    """
+    import random
+    import csv
+
+    print("\n" + "="*60)
+    print("AUTO-SAMPLING MODE")
+    print("="*60)
+    print("This will randomly sample assets for all platforms:")
+    print("  - 100 images total (25 per image-supporting platform)")
+    print("  - 60 videos total (10 per platform)")
+    print("\nSources:")
+    print("  - Images: data/manifests/images/*_signed.png (original signed)")
+    print("  - Videos: data/manifests/videos/external/*_signed.mp4 (all external)")
+    print("\n" + "="*60)
+
+    proceed = input("\nProceed with auto-sampling? (y/n): ").strip().lower()
+    if proceed != 'y':
+        print("Cancelled.")
+        return False
+
+    # Find original signed assets (not transformed)
+    images_dir = Path("data/manifests/images")
+    videos_dir = Path("data/manifests/videos/external")
+
+    if not images_dir.exists():
+        print(f"\nERROR: Images directory not found: {images_dir}")
+        print("Please run image generation and C2PA signing first.")
+        return False
+
+    if not videos_dir.exists():
+        print(f"\nERROR: External videos directory not found: {videos_dir}")
+        print("Please run external video preparation first.")
+        return False
+
+    # Get all signed assets
+    all_images = list(images_dir.glob("*_signed.png"))
+    all_videos = list(videos_dir.glob("*_signed.mp4"))
+
+    print(f"\nFound {len(all_images)} signed images")
+    print(f"Found {len(all_videos)} signed videos")
+
+    if len(all_images) < 100:
+        print(f"\nWARNING: Only {len(all_images)} images available, need 100")
+        return False
+
+    if len(all_videos) < 60:
+        print(f"\nWARNING: Only {len(all_videos)} videos available, need 60")
+        return False
+
+    # Platform distribution
+    platform_distribution = {
+        'instagram': {'images': 25, 'videos': 10, 'mode': 'post'},
+        'twitter': {'images': 25, 'videos': 10, 'mode': 'upload'},
+        'facebook': {'images': 25, 'videos': 10, 'mode': 'post'},
+        'whatsapp': {'images': 25, 'videos': 10, 'mode': 'compressed'},
+        'youtube_shorts': {'images': 0, 'videos': 10, 'mode': 'upload'},
+        'tiktok': {'images': 0, 'videos': 10, 'mode': 'upload'}
+    }
+
+    # Randomly sample without replacement
+    random.seed(42)  # For reproducibility
+    sampled_images = random.sample(all_images, 100)
+    sampled_videos = random.sample(all_videos, 60)
+
+    # Distribute samples
+    image_idx = 0
+    video_idx = 0
+    tracking_data = []
+
+    print("\n" + "="*60)
+    print("Copying assets to platform upload folders...")
+    print("="*60)
+
+    for platform, counts in platform_distribution.items():
+        upload_dir = PLATFORM_TESTS_BASE / platform / "uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"\n{platform.replace('_', ' ').title()}:")
+
+        # Copy images
+        for i in range(counts['images']):
+            src = sampled_images[image_idx]
+            dst = upload_dir / src.name
+            shutil.copy2(src, dst)
+
+            tracking_data.append({
+                'platform': platform,
+                'asset_type': 'image',
+                'original_file': src.name,
+                'upload_path': str(dst.relative_to(Path.cwd())),
+                'prepared_timestamp': datetime.now().isoformat()
+            })
+
+            image_idx += 1
+
+        print(f"  Copied {counts['images']} images")
+
+        # Copy videos
+        for i in range(counts['videos']):
+            src = sampled_videos[video_idx]
+            dst = upload_dir / src.name
+            shutil.copy2(src, dst)
+
+            tracking_data.append({
+                'platform': platform,
+                'asset_type': 'video',
+                'original_file': src.name,
+                'upload_path': str(dst.relative_to(Path.cwd())),
+                'prepared_timestamp': datetime.now().isoformat()
+            })
+
+            video_idx += 1
+
+        print(f"  Copied {counts['videos']} videos")
+
+    # Save tracking CSV
+    tracking_csv = PLATFORM_TESTS_BASE / "auto_sample_tracking.csv"
+    with open(tracking_csv, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=['platform', 'asset_type', 'original_file', 'upload_path', 'prepared_timestamp'])
+        writer.writeheader()
+        writer.writerows(tracking_data)
+
+    print(f"\n{' ='*60}")
+    print("AUTO-SAMPLING COMPLETE")
+    print("="*60)
+    print(f"Total assets prepared: {len(tracking_data)}")
+    print(f"  Images: {image_idx}")
+    print(f"  Videos: {video_idx}")
+    print(f"\nTracking file: {tracking_csv}")
+    print("\nNext steps:")
+    print("  1. Review assets in data/platform_tests/{platform}/uploads/")
+    print("  2. Upload to respective platforms (NO filters, NO edits)")
+    print("  3. Download returned files to data/platform_tests/{platform}/returned/")
+    print("  4. Run scripts/platform/process_platform_returns.py")
+    print("="*60)
+
+    return True
+
+
 def main():
     """Main entry point."""
+    import argparse
+
+    # Parse CLI arguments
+    parser = argparse.ArgumentParser(
+        description="Prepare assets for platform upload testing",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  Interactive mode:
+    python scripts/platform/prepare_platform_uploads.py
+
+  Auto-sampling mode (100 images + 60 videos):
+    python scripts/platform/prepare_platform_uploads.py --auto-sample
+        """
+    )
+    parser.add_argument(
+        '--auto-sample',
+        action='store_true',
+        help='Automatically sample and prepare 100 images + 60 videos for all platforms'
+    )
+    args = parser.parse_args()
+
     print("="*60)
     print("Platform Upload Preparation - C2PA Robustness Testing")
     print("Phase 2.5: Social Media Round-Trip Testing")
@@ -464,7 +641,12 @@ def main():
         print("Please install c2patool: cargo install c2patool")
         sys.exit(1)
 
-    # Find transformed assets
+    # Auto-sampling mode
+    if args.auto_sample:
+        success = auto_sample_uploads()
+        sys.exit(0 if success else 1)
+
+    # Interactive mode: Find transformed assets
     print("\nScanning transformed assets...")
     assets = find_transformed_assets()
 
@@ -483,6 +665,7 @@ def main():
         print(f"{'='*60}")
         print(f"  [1] Prepare Image for Upload ({len(assets['images'])} available)")
         print(f"  [2] Prepare Video for Upload ({len(assets['videos'])} available)")
+        print(f"  [3] Auto-Sample All Platforms (100 images + 60 videos)")
         print(f"  [0] Exit")
 
         try:
@@ -528,6 +711,13 @@ def main():
                 if success:
                     print("\nUpload preparation complete!")
                     input("\nPress Enter to continue...")
+
+            elif choice == '3':
+                # Auto-sampling mode
+                success = auto_sample_uploads()
+                if success:
+                    print("\nAuto-sampling complete!")
+                input("\nPress Enter to continue...")
 
             else:
                 print("Invalid selection. Please try again.")

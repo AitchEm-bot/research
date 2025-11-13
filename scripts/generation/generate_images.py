@@ -2,9 +2,11 @@
 """
 Generate deterministic AI images using Stable Diffusion (diffusers library).
 
-This script generates a specified number of 512×512 images using Stable Diffusion
+This script generates a specified number of 1024×1024 images using Stable Diffusion
 with deterministic seeding for reproducibility. Outputs are saved to the specified
 directory with metadata logged.
+
+Prompts are loaded from data/raw_images/prompts.txt (one per line).
 
 Citation:
   Stable Diffusion - Rombach et al., "High-Resolution Image Synthesis with
@@ -12,7 +14,7 @@ Citation:
   https://arxiv.org/abs/2112.10752
 
 Usage:
-  python generate_images.py --seed 42 --count 10 --output-dir data/raw_images/
+  python generate_images.py --seed 42 --count 100 --output-dir data/raw_images/
 """
 
 import argparse
@@ -62,8 +64,8 @@ def set_seed(seed: int):
     logger.info(f"Random seed set to: {seed}")
 
 
-def generate_images(output_dir: Path, count: int = 10, seed: int = 42,
-                   resolution: int = 512):
+def generate_images(output_dir: Path, count: int = 100, seed: int = 42,
+                   resolution: int = 1024):
     """
     Generate deterministic images using Stable Diffusion.
 
@@ -71,7 +73,7 @@ def generate_images(output_dir: Path, count: int = 10, seed: int = 42,
         output_dir: Directory to save generated images
         count: Number of images to generate
         seed: Random seed for reproducibility
-        resolution: Image resolution (default 512×512)
+        resolution: Image resolution (default 1024×1024)
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -130,19 +132,26 @@ def generate_images(output_dir: Path, count: int = 10, seed: int = 42,
         logger.error(f"Visit: https://huggingface.co/{model_id}")
         sys.exit(1)
 
-    # Define prompts for diverse test images
-    prompts = [
-        "a photograph of a mountain landscape at sunset",
-        "a close-up photo of a red rose with water droplets",
-        "an abstract painting with geometric shapes",
-        "a portrait of a robot with glowing eyes",
-        "a scenic view of a tropical beach with palm trees",
-        "a photograph of a modern city skyline at night",
-        "a still life with fruits on a wooden table",
-        "a digital artwork of a futuristic spaceship",
-        "a photograph of autumn leaves on the ground",
-        "a minimalist architectural interior design",
-    ]
+    # Load prompts from prompts.txt file
+    prompts_file = output_dir / "prompts.txt"
+    if not prompts_file.exists():
+        logger.error(f"Prompts file not found: {prompts_file}")
+        logger.error("Please create data/raw_images/prompts.txt with one prompt per line")
+        sys.exit(1)
+
+    with open(prompts_file, 'r', encoding='utf-8') as f:
+        # Read all lines and strip whitespace, skip empty lines
+        prompts = [line.strip() for line in f if line.strip()]
+
+    # Remove numbering if present (e.g., "1. prompt" -> "prompt")
+    prompts = [prompt.split('. ', 1)[1] if '. ' in prompt and prompt.split('.')[0].isdigit()
+               else prompt for prompt in prompts]
+
+    logger.info(f"Loaded {len(prompts)} prompts from {prompts_file}")
+
+    if len(prompts) < count:
+        logger.warning(f"Only {len(prompts)} prompts available for {count} images")
+        logger.warning("Prompts will be reused cyclically")
 
     # Generate images
     logger.info(f"Generating {count} images at {resolution}×{resolution}...")
@@ -217,7 +226,7 @@ def main():
     parser.add_argument(
         "--count",
         type=int,
-        default=10,
+        default=100,
         help="Number of images to generate"
     )
     parser.add_argument(
@@ -229,7 +238,7 @@ def main():
     parser.add_argument(
         "--resolution",
         type=int,
-        default=512,
+        default=1024,
         help="Image resolution (width and height)"
     )
 
