@@ -72,6 +72,9 @@ data/manifests/videos/external/*.json
 data/manifests_c2patool/
 data/manifests_json/*.json
 
+# C2PA manifest extractions (JSON files extracted by c2patool)
+data/c2pa_manifests/
+
 # Transformed data - ignore all asset and metadata files but keep folder structure
 data/transformed/**/*.png
 data/transformed/**/*.jpg
@@ -92,6 +95,16 @@ data/platform_tests/**/returned/*.png
 data/platform_tests/**/returned/*.jpg
 data/platform_tests/**/returned/*.mp4
 data/platform_tests/**/returned/*.json
+data/platform_tests/**/compressed/*.png
+data/platform_tests/**/compressed/*.jpg
+data/platform_tests/**/compressed/*.jpeg
+data/platform_tests/**/compressed/*.mp4
+data/platform_tests/**/compressed/*.json
+data/platform_tests/**/compressed/returned/*.png
+data/platform_tests/**/compressed/returned/*.jpg
+data/platform_tests/**/compressed/returned/*.jpeg
+data/platform_tests/**/compressed/returned/*.mp4
+data/platform_tests/**/compressed/returned/*.json
 data/platform_tests/platform_manifest.csv
 
 # Keep directory structure but ignore contents

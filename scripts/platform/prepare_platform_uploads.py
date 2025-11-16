@@ -78,12 +78,12 @@ PLATFORM_CONFIGS = {
         'max_video_duration': 240,  # seconds for optimal quality
         'notes': 'Can upload via web or mobile app.'
     },
-    'youtube_shorts': {
+    'youtube': {
         'modes': ['video'],
         'video_formats': ['.mp4'],
         'image_formats': [],
-        'max_video_duration': 60,  # seconds (Shorts limit)
-        'notes': 'Use YouTube mobile app. Vertical format preferred.'
+        'max_video_duration': 60,  # seconds
+        'notes': 'Use YouTube mobile or web app.'
     },
     'tiktok': {
         'modes': ['video'],
@@ -101,11 +101,14 @@ PLATFORM_CONFIGS = {
     }
 }
 
+# C2PA tool path
+C2PATOOL_PATH = Path("tools/c2patool/c2patool/c2patool.exe")
+
 
 def check_c2patool() -> bool:
     """Check if c2patool is available."""
     try:
-        subprocess.run(['c2patool', '--version'], capture_output=True, check=True, timeout=10)
+        subprocess.run([str(C2PATOOL_PATH), '--version'], capture_output=True, check=True, timeout=10)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
         return False
@@ -123,9 +126,8 @@ def verify_c2pa_signature(file_path: Path) -> Tuple[bool, Dict]:
     """
     try:
         cmd = [
-            'c2patool',
-            str(file_path),
-            '--output', 'json'
+            str(C2PATOOL_PATH),
+            str(file_path)
         ]
 
         result = subprocess.run(
@@ -481,11 +483,7 @@ def auto_sample_uploads() -> bool:
     print("  - Images: data/manifests/images/*_signed.png (original signed)")
     print("  - Videos: data/manifests/videos/external/*_signed.mp4 (all external)")
     print("\n" + "="*60)
-
-    proceed = input("\nProceed with auto-sampling? (y/n): ").strip().lower()
-    if proceed != 'y':
-        print("Cancelled.")
-        return False
+    print("\nProceeding with auto-sampling...")
 
     # Find original signed assets (not transformed)
     images_dir = Path("data/manifests/images")
@@ -522,7 +520,7 @@ def auto_sample_uploads() -> bool:
         'twitter': {'images': 25, 'videos': 10, 'mode': 'upload'},
         'facebook': {'images': 25, 'videos': 10, 'mode': 'post'},
         'whatsapp': {'images': 25, 'videos': 10, 'mode': 'compressed'},
-        'youtube_shorts': {'images': 0, 'videos': 10, 'mode': 'upload'},
+        'youtube': {'images': 0, 'videos': 10, 'mode': 'upload'},
         'tiktok': {'images': 0, 'videos': 10, 'mode': 'upload'}
     }
 
@@ -556,7 +554,7 @@ def auto_sample_uploads() -> bool:
                 'platform': platform,
                 'asset_type': 'image',
                 'original_file': src.name,
-                'upload_path': str(dst.relative_to(Path.cwd())),
+                'upload_path': str(dst),
                 'prepared_timestamp': datetime.now().isoformat()
             })
 
@@ -574,7 +572,7 @@ def auto_sample_uploads() -> bool:
                 'platform': platform,
                 'asset_type': 'video',
                 'original_file': src.name,
-                'upload_path': str(dst.relative_to(Path.cwd())),
+                'upload_path': str(dst),
                 'prepared_timestamp': datetime.now().isoformat()
             })
 

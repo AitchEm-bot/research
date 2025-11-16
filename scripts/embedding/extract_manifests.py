@@ -6,8 +6,17 @@ This script reads all signed images and videos in data/manifests/, extracts thei
 embedded C2PA manifests using c2patool, and saves them as separate JSON files for
 analysis and inspection.
 
+Directory Structure:
+  Input:  data/manifests/images/*.png
+          data/manifests/videos/internal/*.mp4
+          data/manifests/videos/external/*.mp4
+
+  Output: data/c2pa_manifests/images/*.json
+          data/c2pa_manifests/videos/internal/*.json
+          data/c2pa_manifests/videos/external/*.json
+
 Usage:
-  python extract_manifests.py --input-dir data/manifests/ --output-dir data/manifests_json/
+  python scripts/embedding/extract_manifests.py
 """
 
 import argparse
@@ -26,6 +35,10 @@ logger = logging.getLogger(__name__)
 
 # Path to c2patool executable
 C2PATOOL_PATH = Path("tools/c2patool/c2patool/c2patool.exe")
+
+# Base directories
+MANIFESTS_BASE = Path("data/manifests")
+OUTPUT_BASE = Path("data/c2pa_manifests")
 
 
 def extract_manifest(asset_path: Path, output_path: Path) -> bool:
@@ -86,80 +99,101 @@ def extract_manifest(asset_path: Path, output_path: Path) -> bool:
         return False
 
 
-def extract_all_manifests(input_dir: Path, output_dir: Path):
+def extract_all_manifests():
     """
-    Extract C2PA manifests from all signed assets in the input directory.
+    Extract C2PA manifests from all signed assets in data/manifests/.
 
-    Args:
-        input_dir: Directory containing signed assets
-        output_dir: Directory to save extracted manifest JSON files
+    Scans:
+    - data/manifests/images/*.png
+    - data/manifests/videos/internal/*.mp4
+    - data/manifests/videos/external/*.mp4
+
+    Outputs to:
+    - data/c2pa_manifests/images/*.json
+    - data/c2pa_manifests/videos/internal/*.json
+    - data/c2pa_manifests/videos/external/*.json
     """
-    # Create output directory
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     total_processed = 0
     total_failed = 0
 
-    # Find all signed assets
-    signed_images = sorted(input_dir.glob("*_signed.png")) + sorted(input_dir.glob("*_signed.jpg"))
-    signed_videos = sorted(input_dir.glob("*_signed.mp4")) + sorted(input_dir.glob("*_signed.avi"))
+    # Define input/output directory pairs
+    extraction_tasks = [
+        {
+            'input_dir': MANIFESTS_BASE / "images",
+            'output_dir': OUTPUT_BASE / "images",
+            'category': 'Images'
+        },
+        {
+            'input_dir': MANIFESTS_BASE / "videos" / "internal",
+            'output_dir': OUTPUT_BASE / "videos" / "internal",
+            'category': 'Videos (Internal)'
+        },
+        {
+            'input_dir': MANIFESTS_BASE / "videos" / "external",
+            'output_dir': OUTPUT_BASE / "videos" / "external",
+            'category': 'Videos (External)'
+        }
+    ]
 
-    all_signed_assets = signed_images + signed_videos
-
-    if not all_signed_assets:
-        logger.warning(f"No signed assets found in {input_dir}")
-        return
-
-    logger.info(f"Found {len(all_signed_assets)} signed assets:")
-    logger.info(f"  Images: {len(signed_images)}")
-    logger.info(f"  Videos: {len(signed_videos)}")
+    logger.info("=" * 60)
+    logger.info("C2PA Manifest Extraction")
     logger.info("=" * 60)
 
-    # Extract manifests
-    for asset_path in all_signed_assets:
-        # Generate output filename (replace _signed.ext with _manifest.json)
-        output_filename = asset_path.stem.replace("_signed", "_manifest") + ".json"
-        output_path = output_dir / output_filename
+    for task in extraction_tasks:
+        input_dir = task['input_dir']
+        output_dir = task['output_dir']
+        category = task['category']
 
-        # Extract manifest
-        success = extract_manifest(asset_path, output_path)
+        # Skip if input directory doesn't exist
+        if not input_dir.exists():
+            logger.warning(f"Input directory not found: {input_dir}")
+            logger.warning(f"Skipping {category}")
+            continue
 
-        if success:
-            total_processed += 1
-        else:
-            total_failed += 1
+        # Create output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info("")  # Blank line for readability
+        # Find all signed assets
+        signed_assets = sorted(input_dir.glob("*_signed.png")) + \
+                       sorted(input_dir.glob("*_signed.jpg")) + \
+                       sorted(input_dir.glob("*_signed.mp4")) + \
+                       sorted(input_dir.glob("*_signed.avi"))
 
+        if not signed_assets:
+            logger.warning(f"No signed assets found in {input_dir}")
+            logger.warning(f"Skipping {category}")
+            continue
+
+        logger.info(f"\n{category}: {len(signed_assets)} assets")
+        logger.info(f"  Input:  {input_dir}")
+        logger.info(f"  Output: {output_dir}")
+        logger.info("-" * 60)
+
+        # Extract manifests
+        for asset_path in signed_assets:
+            # Generate output filename (replace _signed.ext with _manifest.json)
+            output_filename = asset_path.stem.replace("_signed", "_manifest") + ".json"
+            output_path = output_dir / output_filename
+
+            # Extract manifest
+            success = extract_manifest(asset_path, output_path)
+
+            if success:
+                total_processed += 1
+            else:
+                total_failed += 1
+
+    logger.info("")
     logger.info("=" * 60)
     logger.info(f"Manifest Extraction Complete")
     logger.info(f"  Processed: {total_processed}")
     logger.info(f"  Failed: {total_failed}")
-    logger.info(f"  Output directory: {output_dir}")
+    logger.info(f"  Output directory: {OUTPUT_BASE}")
     logger.info("=" * 60)
 
 
 def main():
-    """Main entry point with CLI argument parsing."""
-    parser = argparse.ArgumentParser(
-        description="Extract C2PA manifests from signed assets to JSON files",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument(
-        "--input-dir",
-        type=Path,
-        default=Path("data/manifests"),
-        help="Directory containing signed assets"
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=Path("data/manifests_json"),
-        help="Output directory for extracted manifest JSON files"
-    )
-
-    args = parser.parse_args()
-
+    """Main entry point."""
     # Check if c2patool exists
     if not C2PATOOL_PATH.exists():
         logger.error(f"c2patool not found at: {C2PATOOL_PATH}")
@@ -167,12 +201,11 @@ def main():
         sys.exit(1)
 
     logger.info(f"Using c2patool at: {C2PATOOL_PATH}")
+    logger.info(f"Input directory: {MANIFESTS_BASE}")
+    logger.info(f"Output directory: {OUTPUT_BASE}")
 
     # Extract manifests
-    extract_all_manifests(
-        input_dir=args.input_dir,
-        output_dir=args.output_dir
-    )
+    extract_all_manifests()
 
 
 if __name__ == "__main__":

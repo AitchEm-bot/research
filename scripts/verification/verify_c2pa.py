@@ -115,16 +115,16 @@ def extract_metadata_from_filename(filename: str) -> Dict[str, str]:
         Dict with keys: seed, model_version, transform_type, transform_level
     """
     metadata = {
-        'seed': 'unknown',
-        'model_version': 'unknown',
-        'transform_type': 'unknown',
-        'transform_level': 'unknown'
+        'seed': '',
+        'model_version': '',
+        'transform_type': '',
+        'transform_level': ''
     }
 
     # Check if this is an external video (video_N pattern without "seed" in filename)
     if re.match(r'video_\d+', filename) and 'seed' not in filename:
-        metadata['model_version'] = 'External'
-        metadata['seed'] = 'unknown'
+        metadata['model_version'] = 'Veo3.1'
+        metadata['seed'] = ''
     else:
         # Extract seed (seedXX pattern)
         seed_match = re.search(r'seed(\d+)', filename)
@@ -133,10 +133,10 @@ def extract_metadata_from_filename(filename: str) -> Dict[str, str]:
 
         # Determine model version based on filename prefix
         if filename.startswith('img_'):
-            metadata['model_version'] = 'sd-v1.4'
+            metadata['model_version'] = 'SD1.4'
         elif filename.startswith('video_'):
             # All internal videos are SVD (legacy support removed)
-            metadata['model_version'] = 'svd-xt'
+            metadata['model_version'] = 'SVD'
 
     # Extract transform type and level from filename suffix
     # Remove extension first
@@ -221,7 +221,7 @@ def run_c2patool(asset_path: Path) -> Tuple[Optional[Dict], float]:
     start_time = time.time()
 
     try:
-        cmd = [C2PATOOL_CMD, str(asset_path), '--output', 'json']
+        cmd = [C2PATOOL_CMD, str(asset_path)]
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -258,12 +258,11 @@ def classify_failure_reason(json_data: Optional[Dict], validation_flags: Dict) -
     """
     Classify the reason for C2PA verification failure.
 
-    Failure categories (updated interpretation):
-    - manifest_not_copied: Tool rewrote container without copying C2PA metadata
-      (most common case - manifest dropped during re-encoding, not corrupted)
+    Failure categories:
+    - manifest_dropped: C2PA manifest was stripped/lost during transformation
+      (most common case - transformation tools don't preserve C2PA metadata)
     - hash_or_signature_mismatch: Manifest exists but integrity validation failed
       (signature invalid, hash mismatch, or assertion mismatch)
-    - c2patool_parse_error: c2patool could not parse file (rare)
     - success: All validations passed
 
     Context:
@@ -280,14 +279,10 @@ def classify_failure_reason(json_data: Optional[Dict], validation_flags: Dict) -
     Returns:
         Failure reason string
     """
-    # No JSON output from c2patool (parse error or file access issue)
-    if json_data is None:
-        return "c2patool_parse_error"
-
-    # No manifests found - most common case after transformations
-    # This means the tool rewrote the container without copying C2PA metadata
-    if not validation_flags['manifest_present']:
-        return "manifest_not_copied"
+    # No JSON output from c2patool OR no manifests found
+    # Both cases mean: manifest was dropped during transformation
+    if json_data is None or not validation_flags['manifest_present']:
+        return "manifest_dropped"
 
     # Manifest present, check what failed
     if validation_flags['verified']:
@@ -339,29 +334,35 @@ def parse_c2pa_validation(json_data: Optional[Dict]) -> Dict:
             'validation_state': 'NO_MANIFEST'
         }
 
-    # Extract validation status codes from first manifest
-    status_codes = []
-    validation_state = 'UNKNOWN'
+    # Extract validation status codes from validation_results
+    # c2patool format: validation_results -> activeManifest -> success/failure arrays
+    validation_state = json_data.get('validation_state', 'UNKNOWN')
 
-    for manifest_id, manifest_data in manifests.items():
-        validation_status = manifest_data.get('validation_status', [])
+    validation_results = json_data.get('validation_results', {})
+    active_manifest_results = validation_results.get('activeManifest', {})
 
-        for status in validation_status:
-            code = status.get('code', '')
-            status_codes.append(code)
+    # Collect codes from success array
+    success_codes = []
+    for result in active_manifest_results.get('success', []):
+        code = result.get('code', '')
+        if code:
+            success_codes.append(code)
 
-        # Get overall validation state (if available)
-        if 'validation_state' in manifest_data:
-            validation_state = manifest_data['validation_state']
+    # Collect codes from failure array (for trust status)
+    failure_codes = []
+    for result in active_manifest_results.get('failure', []):
+        code = result.get('code', '')
+        if code:
+            failure_codes.append(code)
 
-        break  # Only process first manifest
-
-    # Check for specific validation codes
-    signature_valid = any('claimSignature.validated' in code for code in status_codes)
+    # Check for specific validation codes in success array
+    signature_valid = any('claimSignature.validated' in code for code in success_codes)
     hash_match = any(('assertion.dataHash.match' in code or
-                      'assertion.bmffHash.match' in code) for code in status_codes)
-    assertion_uris = any('assertion.hashedURI.match' in code for code in status_codes)
-    trust_verified = any('signingCredential.trusted' in code for code in status_codes)
+                      'assertion.bmffHash.match' in code) for code in success_codes)
+    assertion_uris = any('assertion.hashedURI.match' in code for code in success_codes)
+
+    # Trust is typically in failure array (untrusted) or would be in success (trusted)
+    trust_verified = any('signingCredential.trusted' in code for code in success_codes)
 
     # Overall verification: signature AND hash must match
     verified = signature_valid and hash_match
