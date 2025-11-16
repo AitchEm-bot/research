@@ -42,90 +42,95 @@ models/
 huggingface/
 .huggingface/
 
-# Data Directories (Generated AI content - large files)
-data/raw_images/*.png
-data/raw_images/*.jpg
-data/raw_images/*.jpeg
+# =============================================================================
+# DATA DIRECTORIES (Refactored Structure)
+# =============================================================================
+
+# Keep raw unsigned data (internal pipeline generation)
+# These are small source files needed for reproducibility
+# Keep: data/assets/raw_images/*.png (100 images, ~500MB total)
+# Keep: data/assets/raw_videos/*.mp4 (50 videos, ~2GB total)
+# Keep: data/assets/raw_images_for_videos/*.png (conditioning images)
+# Keep: data/assets/raw_out_videos/*.mp4 (60 external videos, ~5GB total)
+
+# Ignore metadata files for raw assets
+data/assets/raw_images/*.json
+data/assets/raw_images_for_videos/*.json
+data/assets/raw_videos/*.json
+data/assets/raw_out_videos/*.json
+data/assets/raw_out_videos/prompts.md
+
+# Prepared Assets - All signed/processed files (ignore everything)
+# These can be regenerated from raw assets
+data/prepared_assets/manifests/**/*.png
+data/prepared_assets/manifests/**/*.jpg
+data/prepared_assets/manifests/**/*.mp4
+data/prepared_assets/manifests/**/*.json
+
+# C2PA manifest extractions
+data/prepared_assets/c2pa_manifests/
+
+# Transformed assets - ignore all outputs
+data/prepared_assets/transformed/**/*.png
+data/prepared_assets/transformed/**/*.jpg
+data/prepared_assets/transformed/**/*.jpeg
+data/prepared_assets/transformed/**/*.mp4
+data/prepared_assets/transformed/**/*.avi
+data/prepared_assets/transformed/**/*.json
+data/prepared_assets/transformed/**/*.log
+
+# Platform tests (Phase 2.5) - ignore uploads/downloads
+data/prepared_assets/platform_tests/**/uploads/*.png
+data/prepared_assets/platform_tests/**/uploads/*.jpg
+data/prepared_assets/platform_tests/**/uploads/*.mp4
+data/prepared_assets/platform_tests/**/returned/*.png
+data/prepared_assets/platform_tests/**/returned/*.jpg
+data/prepared_assets/platform_tests/**/returned/*.mp4
+data/prepared_assets/platform_tests/**/returned/*.json
+data/prepared_assets/platform_tests/platform_manifest.csv
+data/prepared_assets/platform_tests/auto_sample_tracking.csv
+data/prepared_assets/platform_tests/rename_log.csv
+
+# Results - All CSVs and analysis outputs (regenerable)
+data/results/*.csv
+data/results/logs/*.log
+
+# Keep directory structure with .gitkeep files
+!data/assets/raw_images/.gitkeep
+!data/assets/raw_images_for_videos/.gitkeep
+!data/assets/raw_videos/.gitkeep
+!data/assets/raw_out_videos/.gitkeep
+!data/assets/raw_out_videos/README.md
+!data/prepared_assets/manifests/images/.gitkeep
+!data/prepared_assets/manifests/videos/internal/.gitkeep
+!data/prepared_assets/manifests/videos/external/.gitkeep
+!data/prepared_assets/c2pa_manifests/.gitkeep
+!data/prepared_assets/transformed/.gitkeep
+!data/prepared_assets/platform_tests/**/.gitkeep
+!data/prepared_assets/platform_tests/README_PHASE_2.5.md
+!data/prepared_assets/platform_tests/platform_manifest_TEMPLATE.csv
+!data/results/.gitkeep
+!data/results/logs/.gitkeep
+
+# =============================================================================
+# OLD STRUCTURE (Deprecated - kept for backwards compatibility during migration)
+# =============================================================================
 data/raw_images/*.json
-data/raw_images_for_video/*.png
-data/raw_images_for_video/*.jpg
 data/raw_images_for_video/*.json
-data/raw_videos/*.mp4
-data/raw_videos/*.avi
 data/raw_videos/*.json
-
-# External videos (large files, user-provided - Sora, Runway, etc.)
-# data/raw_out_videos/*.mp4
-data/raw_out_videos/*.mov
-data/raw_out_videos/*.avi
 data/raw_out_videos/*.json
-data/raw_out_videos/prompts.md
-
-# Signed manifests - organized structure
-data/manifests/images/*.png
-data/manifests/images/*.jpg
-data/manifests/images/*.json
-data/manifests/videos/internal/*.mp4
-data/manifests/videos/internal/*.json
-data/manifests/videos/external/*.mp4
-data/manifests/videos/external/*.json
+data/manifests/
 data/manifests_c2patool/
-data/manifests_json/*.json
-
-# C2PA manifest extractions (JSON files extracted by c2patool)
+data/manifests_json/
 data/c2pa_manifests/
-
-# Transformed data - ignore all asset and metadata files but keep folder structure
-data/transformed/**/*.png
-data/transformed/**/*.jpg
-data/transformed/**/*.jpeg
-data/transformed/**/*.mp4
-data/transformed/**/*.avi
-data/transformed/**/*.json
-data/transformed/**/*.log
-
-# Metrics output
+data/transformed/
 data/metrics/
+data/platform_tests/
 
-# Platform tests (Phase 2.5) - ignore user uploads/downloads but keep structure
-data/platform_tests/**/uploads/*.png
-data/platform_tests/**/uploads/*.jpg
-data/platform_tests/**/uploads/*.mp4
-data/platform_tests/**/returned/*.png
-data/platform_tests/**/returned/*.jpg
-data/platform_tests/**/returned/*.mp4
-data/platform_tests/**/returned/*.json
-data/platform_tests/**/compressed/*.png
-data/platform_tests/**/compressed/*.jpg
-data/platform_tests/**/compressed/*.jpeg
-data/platform_tests/**/compressed/*.mp4
-data/platform_tests/**/compressed/*.json
-data/platform_tests/**/compressed/returned/*.png
-data/platform_tests/**/compressed/returned/*.jpg
-data/platform_tests/**/compressed/returned/*.jpeg
-data/platform_tests/**/compressed/returned/*.mp4
-data/platform_tests/**/compressed/returned/*.json
-data/platform_tests/platform_manifest.csv
-
-# Keep directory structure but ignore contents
-!data/raw_images/.gitkeep
-!data/raw_images_for_video/.gitkeep
-!data/raw_videos/.gitkeep
-!data/raw_out_videos/.gitkeep
-!data/raw_out_videos/README.md
-!data/manifests/images/.gitkeep
-!data/manifests/videos/internal/.gitkeep
-!data/manifests/videos/external/.gitkeep
-!data/transformed/.gitkeep
-!data/metrics/.gitkeep
-!data/manifests_json/.gitkeep
-!data/platform_tests/**/.gitkeep
-!data/platform_tests/README_PHASE_2.5.md
-!data/platform_tests/platform_manifest_TEMPLATE.csv
-
-# Results & Outputs
+# =============================================================================
+# RESULTS & OUTPUTS
+# =============================================================================
 results/
-*.csv
 *.html
 
 # Logs
@@ -133,6 +138,10 @@ logs/
 *.log
 /sessions
 nul
+
+# =============================================================================
+# DEVELOPMENT ENVIRONMENT
+# =============================================================================
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -148,15 +157,6 @@ nul
 
 # Claude Code
 .claude/
-PHASES.md
-PHASE4.md
-claude_verification_prompt.txt
-CLAUDE.md
-
-# Old/deprecated scripts (keeping for reference but not tracking changes)
-scripts/embedding/embed_c2pa.py.bak
-scripts/embedding/generate_test_certs.py
-scripts/embedding/test_c2pa_signing.py
 
 # Windows
 Thumbs.db
@@ -174,26 +174,32 @@ htmlcov/
 .env
 .env.local
 
+# =============================================================================
+# SECURITY - NEVER COMMIT
+# =============================================================================
+
 # C2PA Keys and Certificates (NEVER commit private keys)
-data/manifests/test_keys/
+data/prepared_assets/manifests/test_keys/
 data/certs/*.key
 data/certs/*.pem
 data/certs/*.crt
 data/certs/*.csr
 data/certs/*.srl
 
+# =============================================================================
+# TOOLS & BINARIES
+# =============================================================================
+
 # c2patool binary and downloads
 tools/c2patool/
 tools/*.zip
 
-# Temporary files
+# =============================================================================
+# TEMPORARY FILES
+# =============================================================================
 *.tmp
 *.temp
 *.bak
 *.swp
 temp/
 tmp/
-
-# System files
-.DS_Store
-*.pyc

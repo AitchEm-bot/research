@@ -4,46 +4,252 @@
 
 This project implements an end-to-end, reproducible research pipeline to test the robustness of C2PA (Coalition for Content Provenance and Authenticity) manifests embedded in AI-generated images and videos under various compression and editing transformations.
 
-**Research Question**: How well do C2PA content credentials survive real-world transformations such as JPEG compression, video re-encoding, and multi-generation copying?
+**Research Question**: How well do C2PA content credentials survive real-world transformations such as JPEG compression, video re-encoding, platform round-trips, and multi-generation copying?
 
 ## Project Status
 
-Current Phase: **Initial Scaffold - Generation & Embedding**
+**Current Phase**: Phase 4 - Analysis & Visualization
 
-- ✅ Image generation (Stable Diffusion via diffusers)
-- ✅ Video generation (procedural frame-based, placeholder for diffusion models)
-- ✅ C2PA manifest embedding (shim implementation, ready for c2pa-python)
-- ⏳ Transformations (compression, re-encoding) - Next phase
-- ⏳ Verification & metrics collection - Next phase
-- ⏳ Analysis & reporting - Next phase
+Pipeline completion status:
+- ✅ Phase 1: Generation & C2PA Embedding (100 images, 110 videos)
+- ✅ Phase 2: Transformations & Compression (~3,460 transformed assets)
+- ✅ Phase 2.5: Social Media Round-Trip Testing (160 platform samples)
+- ✅ Phase 3: Verification & Metric Computation (final_metrics.csv generated)
+- ⏳ Phase 4: Data Analysis & Visualization
+- ⏳ Phase 5: Dockerization & Reproducibility
+- ⏳ Phase 6: Paper-Ready Artifacts & Documentation
 
 ## Project Structure
 
 ```
 research/
 ├── data/
-│   ├── raw_images/          # Generated AI images (10 samples)
-│   ├── raw_videos/          # Generated AI videos (2 samples)
-│   ├── manifests/           # C2PA manifest JSON files
-│   ├── transformed/         # Assets after compression/editing
-│   └── metrics/             # Collected metrics data
+│   ├── assets/                      # Raw generated/external assets
+│   │   ├── raw_images/              # 100 images (SD1.4, 1024×1024)
+│   │   ├── raw_videos/              # Internal videos (SVD)
+│   │   ├── raw_images_for_videos/   # Conditioning images for SVD
+│   │   └── raw_out_videos/          # 60 external videos (Veo3.1)
+│   ├── prepared_assets/             # Processed assets ready for testing
+│   │   ├── manifests/               # C2PA signed assets (210 total)
+│   │   │   ├── images/              # 100 signed images
+│   │   │   └── videos/
+│   │   │       ├── internal/        # 50 signed internal videos (SVD)
+│   │   │       └── external/        # 60 signed external videos (Veo3.1)
+│   │   ├── c2pa_manifests/          # Extracted C2PA manifest JSONs
+│   │   ├── transformed/             # ~3,460 transformed assets
+│   │   │   ├── compression/
+│   │   │   │   ├── images/          # JPEG q95/q75/q50/q25, PNG c9/c0
+│   │   │   │   └── videos/          # H.264/H.265 bitrates, FPS adjustments
+│   │   │   └── editing/
+│   │   │       ├── images/          # resize, crop, rotate, brightness, etc.
+│   │   │       └── videos/          # resize, crop, trim, brightness, etc.
+│   │   └── platform_tests/          # Phase 2.5 social media testing
+│   │       ├── instagram/
+│   │       ├── twitter/
+│   │       ├── facebook/
+│   │       ├── youtube/
+│   │       ├── tiktok/
+│   │       └── auto_sample_tracking.csv
+│   └── results/                     # All outputs (CSV files and logs)
+│       ├── c2pa_validation.csv      # C2PA verification results
+│       ├── quality_metrics.csv      # Quality metrics (PSNR/SSIM/VMAF)
+│       ├── platform_results.csv     # Phase 2.5 platform testing results
+│       ├── final_metrics.csv        # Merged comprehensive results (~3,620 rows)
+│       └── logs/                    # All execution logs
 ├── scripts/
-│   ├── generation/
-│   │   ├── generate_images.py   # Stable Diffusion image generation
-│   │   └── generate_videos.py   # Procedural video generation
-│   ├── embedding/
-│   │   └── embed_c2pa.py        # C2PA manifest creation
-│   ├── transformations/         # (Next phase)
-│   ├── verification/            # (Next phase)
-│   └── analysis/                # (Next phase)
-├── results/
-│   ├── csv/                 # Metrics CSV files
-│   ├── plots/               # Visualization plots
-│   └── logs/                # Execution logs
-├── CLAUDE.md                # Project constraints & memory
-├── system-prompt.txt        # Technical specifications
-└── README.md                # This file
+│   ├── common/                      # Shared utilities
+│   │   └── utils.py                 # Centralized functions (logging, CSV, paths)
+│   ├── c2pa/                        # C2PA operations
+│   │   ├── embedding/               # C2PA manifest signing
+│   │   │   ├── embed_c2pa_v2.py
+│   │   │   └── extract_manifests.py
+│   │   └── verification/            # C2PA manifest verification
+│   │       ├── verify_c2pa.py
+│   │       └── verify_original_manifests.py
+│   └── processing/                  # Data processing pipeline
+│       ├── generation/              # Asset generation
+│       │   ├── generate_images.py
+│       │   ├── generate_videos.py
+│       │   └── generate_video_images.py
+│       ├── transformations/         # Compression and editing
+│       │   ├── compress_images.py
+│       │   ├── compress_videos.py
+│       │   └── edit_assets.py
+│       ├── metrics/                 # Quality metrics and result merging
+│       │   ├── calculate_quality_metrics.py
+│       │   └── merge_results.py
+│       └── preprocessing/           # External assets and platform preparation
+│           ├── external/            # External video preparation
+│           │   └── prepare_external_videos.py
+│           └── platform/            # Phase 2.5 platform testing
+│               ├── prepare_platform_uploads.py
+│               ├── process_platform_returns.py
+│               ├── rename_platform_returns.py
+│               └── rename_platform_uploads.py
+├── CLAUDE.md                        # Project memory & agent constraints
+├── FLOW_DIAGRAM.md                  # Pipeline visualization
+└── README.md                        # This file
 ```
+
+## Research Pipeline Phases
+
+### PHASE 1 — Generation & C2PA Embedding
+
+**Goal:** Generate AI-produced images and videos, then embed C2PA manifests.
+
+**Internal Pipeline:**
+- 100 images (Stable Diffusion v1.4, 1024×1024, seeds 42-141)
+- 50 videos (Stable Video Diffusion, image-to-video)
+- All assets signed with c2patool (built-in test certificate)
+
+**External Videos:**
+- 60 videos from Google Veo3.1
+- Automatically signed during preparation
+- Enables cross-platform AI comparison
+
+**Deliverables:**
+- ✅ 100 signed images in `data/prepared_assets/manifests/images/`
+- ✅ 110 signed videos (50 internal + 60 external)
+- ✅ Metadata preserved: seed, model version, generation prompts
+
+---
+
+### PHASE 2 — Transformations & Compression Testing
+
+**Goal:** Apply controlled transformations to assess how content modifications affect C2PA metadata.
+
+**Image Transformations:**
+- JPEG compression (q95, q75, q50, q25)
+- PNG compression (c0, c9 - lossless)
+- Resize (75%, 50%, 25%)
+- Crop (center 80%, 60%)
+- Rotation (90°, 180°)
+- Brightness adjustment (-40 to +40)
+- Contrast adjustment
+- Saturation adjustment
+
+**Video Transformations:**
+- H.264 re-encoding (5000k, 2000k, 500k bitrates)
+- H.265 re-encoding (2000k, 500k bitrates)
+- FPS adjustment (30fps, 10fps, 5fps, 3fps)
+- Resize (75%, 50%)
+- Crop (center 80%)
+- Trim (first 50%, middle 50%)
+- Brightness adjustment (-40 to +40)
+
+**Deliverables:**
+- ✅ ~3,460 transformed assets in `data/prepared_assets/transformed/`
+- ✅ Comprehensive transformation coverage across both images and videos
+
+---
+
+### PHASE 2.5 — Social Media Round-Trip Testing
+
+**Goal:** Test whether C2PA manifests survive after uploading and downloading from major social platforms.
+
+**Platforms Tested:**
+- Instagram (video, image, post) - 25 images + 10 videos
+- Twitter/X (video, image, upload) - 25 images + 10 videos
+- Facebook (video, image, post) - 25 images + 10 videos
+- YouTube (video, upload) - 10 videos
+- TikTok (video, upload) - 10 videos
+
+**Workflow:**
+1. Auto-sampled 160 assets (100 images + 60 videos)
+2. Manual upload to platforms (via mobile/web apps)
+3. Manual download using third-party tools (FastDL, Snaplytics, SnapTik)
+4. Automated processing with C2PA verification + quality metrics
+
+**Download Tools Used:**
+- Instagram: FastDL (https://fastdl.app/en2)
+- Twitter: Snaplytics (https://snaplytics.io/twitter-img-downloader/)
+- TikTok: SnapTik (https://snaptik.cx/)
+- Facebook/YouTube: Direct platform download
+
+**Expected Outcomes:**
+- ✅ Most platforms STRIPPED C2PA manifests (manifest_present = 0)
+- ✅ Quality degradation documented via PSNR/SSIM/VMAF metrics
+- ✅ Platform-specific compression characteristics analyzed
+
+**Deliverables:**
+- ✅ `data/results/platform_results.csv` (160 platform round-trip results)
+- ✅ Integrated into `final_metrics.csv` with platform metadata
+
+---
+
+### PHASE 3 — Verification & Metric Computation
+
+**Goal:** Validate C2PA manifests post-transformations and measure perceptual quality degradation.
+
+**C2PA Verification Metrics:**
+- manifest_present (0/1)
+- verified (0/1) - INTEGRITY validation (claimSignature.validated)
+- signature_valid, hash_match, assertion_uris_match (0/1)
+- trust_verified (informational, not failure metric)
+- validation_state, failure_reason (descriptive)
+
+**Quality Metrics:**
+- **Images**: PSNR, SSIM (stretched + aligned variants)
+- **Videos**: VMAF (stretched + aligned variants, aspect ratio aware)
+- **Alignment methods**: same_aspect_ratio, crop_reference_center_square, scale_both_to_minimum
+- **Lossless detection**: lossless_match flag (PSNR >= 100 dB)
+
+**Deliverables:**
+- ✅ `data/results/c2pa_validation.csv` (~3,460 transformed + 160 platform)
+- ✅ `data/results/quality_metrics.csv` (~3,460 transformed + 160 platform)
+- ✅ `data/results/final_metrics.csv` (~3,620 total rows, 29 columns)
+
+---
+
+### PHASE 4 — Data Analysis & Visualization
+
+**Goal:** Analyze correlations between visual quality degradation and metadata loss.
+
+**Planned Tasks:**
+- Correlation matrix for PSNR/SSIM/VMAF vs Manifest Retention
+- Distribution plots by transform type and platform
+- Heatmaps for integrity loss patterns
+- Statistical significance testing
+- Generate publication-ready plots
+
+**Deliverables:**
+- ⏳ `plots/*.png` - Visualization outputs
+- ⏳ `analysis_summary.txt` - Data-backed insights for thesis
+
+---
+
+### PHASE 5 — Dockerization & Reproducibility
+
+**Goal:** Containerize the full experiment pipeline for reproducibility.
+
+**Planned Tasks:**
+- Build Dockerfile with CUDA-enabled dependencies
+- Include PyTorch, FFmpeg, libvmaf, c2patool
+- Test on external GPU machine
+- Document full setup process
+
+**Deliverables:**
+- ⏳ `Dockerfile` with CUDA 12.1 support
+- ⏳ `README_DOCKER.md` with setup instructions
+
+---
+
+### PHASE 6 — Paper-Ready Artifacts & Documentation
+
+**Goal:** Prepare all materials for IEEE-format publication.
+
+**Planned Tasks:**
+- Finalize methodology and results documentation
+- Generate citation bibliography
+- Export publication-ready figures
+- Write comprehensive experiment summary
+
+**Deliverables:**
+- ⏳ `references.bib` - Citation database
+- ⏳ `README_FOR_PAPER.md` - Experiment summary
+- ⏳ All analysis figures for paper inclusion
+
+---
 
 ## Dependencies
 
@@ -51,343 +257,152 @@ research/
 - **Python**: >= 3.12 (tested with 3.12.6)
 - **CUDA GPU**: NVIDIA GPU with CUDA 12.1+ support (tested on RTX 4060 Laptop with 8GB VRAM)
 - **ffmpeg**: For video operations (install via system package manager or winget)
+- **c2patool**: C2PA command-line tool from contentauth/c2pa-rs
 - **OS**: Windows 10/11, Linux (Ubuntu/WSL2)
 
 ### Installation
 
-#### Option 1: Using requirements.txt (Recommended)
-
 ```bash
 # Install all dependencies with CUDA 12.1 support
 pip install -r requirements.txt
+
+# Install c2patool (download from releases or use local build in tools/c2patool/)
 ```
 
-#### Option 2: Manual Installation
-
-```bash
-# Core deep learning (CUDA 12.1 build for RTX 4060 and newer GPUs)
-pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
-
-# Generative AI models
-pip install diffusers==0.31.0 transformers==4.47.1 accelerate==1.2.1
-
-# Memory optimization for 8GB VRAM (optional but recommended)
-pip install xformers==0.0.28.post2
-
-# Image/video processing
-pip install opencv-python==4.10.0.84 Pillow==11.0.0 ffmpeg-python==0.2.0
-
-# Scientific computing & analysis
-pip install numpy==2.2.1 pandas==2.2.3 scikit-image==0.24.0
-pip install matplotlib==3.9.3 seaborn==0.13.2
-
-# CLI utilities
-pip install typer==0.15.1 python-dotenv==1.0.1 tqdm==4.67.1
-
-# C2PA (optional - using fallback shim if unavailable)
-# pip install c2pa-python==0.4.2
-```
-
-**Notes**:
-- The `c2pa-python` library is optional. Scripts use a fallback shim if unavailable.
-- `xformers` provides memory-efficient attention for 8GB VRAM GPUs
+**Notes:**
 - CUDA 12.1 build is compatible with CUDA 12.x drivers (12.1-12.9)
+- Scripts automatically enable memory optimizations for GPUs with ≤8GB VRAM
+- c2patool 0.24.0+ required for proper C2PA manifest handling
 
 ### Windows-Specific Setup
 
-#### Installing ffmpeg on Windows
-
 ```bash
-# Using winget (Windows 11)
+# Install ffmpeg using winget (Windows 11)
 winget install ffmpeg
-
-# Or download from: https://www.gyan.dev/ffmpeg/builds/
-# Add to PATH after extraction
 ```
 
-#### GPU Memory Optimization for RTX 4060 (8GB VRAM)
+## Quick Start - Full Pipeline
 
-The scripts automatically enable memory optimizations for GPUs with ≤8GB VRAM:
-- Half-precision (FP16) inference
-- Attention slicing
-- Model offloading to CPU when needed
-
-To force CPU-only mode (if GPU unavailable):
-```bash
-export CUDA_VISIBLE_DEVICES=""  # Linux/WSL
-set CUDA_VISIBLE_DEVICES=       # Windows CMD
-```
-
-## Quick Start - Smoke Test
-
-Follow these steps to run the smoke test and generate the initial test dataset:
-
-### Step 1: Generate Images
-
-Generate 10 deterministic 512×512 images using Stable Diffusion:
+### Step 1: Generate Images (COMPLETED)
 
 ```bash
-python scripts/generation/generate_images.py \
-    --output-dir data/raw_images \
-    --count 10 \
-    --seed 42 \
-    --resolution 512
+python scripts/processing/generation/generate_images.py \
+    --seed 42 --count 100 --output-dir data/assets/raw_images
 ```
 
-**Expected output**:
-- 10 PNG images in `data/raw_images/`
-- Naming pattern: `img_000_seed42_TIMESTAMP.png` through `img_009_seed51_TIMESTAMP.png`
-- 10 JSON metadata files (one per image)
-- Total time: ~5-15 minutes (depending on GPU)
-
-**Options**:
-- `--seed`: Random seed for reproducibility (default: 42)
-- `--count`: Number of images to generate (default: 10)
-- `--resolution`: Image size in pixels (default: 512)
-
-### Step 2: Generate Videos
-
-Generate 2 short low-resolution test videos (3 seconds each):
+### Step 2: Sign Assets with C2PA (COMPLETED)
 
 ```bash
-python scripts/generation/generate_videos.py \
-    --output-dir data/raw_videos \
-    --count 2 \
-    --seed 42 \
-    --duration 3.0 \
-    --fps 10 \
-    --width 256 \
-    --height 256
+python scripts/c2pa/embedding/embed_c2pa_v2.py
 ```
 
-**Expected output**:
-- 2 MP4 videos in `data/raw_videos/`
-- Naming pattern: `video_000_seed42_TIMESTAMP.mp4`, `video_001_seed43_TIMESTAMP.mp4`
-- 2 JSON metadata files (one per video)
-- Total time: ~10-30 seconds
-
-**Options**:
-- `--seed`: Random seed for reproducibility (default: 42)
-- `--count`: Number of videos to generate (default: 2)
-- `--duration`: Video length in seconds (default: 3.0)
-- `--fps`: Frames per second (default: 10)
-- `--width` / `--height`: Video resolution (default: 256×256)
-
-### Step 3: Create C2PA Manifests
-
-Create C2PA content credentials for all generated images and videos:
+### Step 3: Run Transformations (COMPLETED)
 
 ```bash
-python scripts/embedding/embed_c2pa.py \
-    --images-dir data/raw_images \
-    --videos-dir data/raw_videos \
-    --output-dir data/manifests
+# Image transformations
+python scripts/processing/transformations/compress_images.py
+
+# Video transformations
+python scripts/processing/transformations/compress_videos.py
+
+# Editing transformations
+python scripts/processing/transformations/edit_assets.py
 ```
 
-**Expected output**:
-- Manifest JSON files in `data/manifests/`
-- One manifest per asset (12 total: 10 images + 2 videos)
-- Naming pattern: `img_000_seed42_TIMESTAMP_manifest.json`
-- Test keypair placeholders in `data/manifests/test_keys/`
+### Step 4: Verify C2PA & Calculate Metrics (COMPLETED)
 
-**Notes**:
-- By default, uses fallback shim (creates JSON manifests without real signing)
-- To use real C2PA signing (when c2pa-python is available), add `--use-real-c2pa`
-- Manifests include: creation timestamp, seed, model info, assertions, and signature placeholders
-
-### Verify Smoke Test Success
-
-Check that all expected files were created:
-
-**Linux/WSL:**
 ```bash
-# Count generated files
-ls data/raw_images/*.png | wc -l    # Should show: 10
-ls data/raw_videos/*.mp4 | wc -l    # Should show: 2
-ls data/manifests/*_manifest.json | wc -l  # Should show: 12
+# C2PA verification
+python scripts/c2pa/verification/verify_c2pa.py
 
-# Inspect a sample image
-file data/raw_images/img_000_seed42_*.png
+# Quality metrics
+python scripts/processing/metrics/calculate_quality_metrics.py
 
-# Inspect a sample video
-ffmpeg -i data/raw_videos/video_000_seed42_*.mp4
-
-# View a sample manifest
-cat data/manifests/img_000_seed42_*_manifest.json | head -30
+# Merge results
+python scripts/processing/metrics/merge_results.py
 ```
 
-**Windows (PowerShell):**
-```powershell
-# Count generated files
-(Get-ChildItem data\raw_images\*.png).Count    # Should show: 10
-(Get-ChildItem data\raw_videos\*.mp4).Count    # Should show: 2
-(Get-ChildItem data\manifests\*_manifest.json).Count  # Should show: 12
+### Step 5: Platform Testing (COMPLETED)
 
-# Inspect a sample video
-ffmpeg -i data\raw_videos\video_000_seed42_*.mp4
+```bash
+# Prepare uploads
+python scripts/processing/preprocessing/platform/prepare_platform_uploads.py --auto-sample
 
-# View a sample manifest (first 30 lines)
-Get-Content data\manifests\img_000_seed42_*_manifest.json | Select-Object -First 30
+# [Manual upload/download steps]
+
+# Process returns
+python scripts/processing/preprocessing/platform/process_platform_returns.py
+
+# Merge with final results
+python scripts/processing/metrics/merge_results.py
+```
+
+## Testing & Debugging
+
+All scripts support `--test` flag for smoke testing:
+
+```bash
+# Test C2PA verification (4 sample assets)
+python scripts/c2pa/verification/verify_c2pa.py --test
+
+# Test quality metrics (4 sample assets)
+python scripts/processing/metrics/calculate_quality_metrics.py --test
+
+# Test platform processing (2 sample files from first platform)
+python scripts/processing/preprocessing/platform/process_platform_returns.py --test
 ```
 
 ## Technical Details
 
-### Image Generation
+### AI Models Used
 
-- **Model**: Stable Diffusion v1.4 (CompVis)
-- **Citation**: Rombach et al., "High-Resolution Image Synthesis with Latent Diffusion Models," CVPR 2022
-- **Resolution**: 512×512 pixels
-- **Format**: PNG (lossless)
-- **Determinism**: Seeded with `--seed` + image index
+**Image Generation:**
+- Model: Stable Diffusion v1.4 (CompVis/stable-diffusion-v1-4)
+- Paper: "High-Resolution Image Synthesis with Latent Diffusion Models" (Rombach et al., CVPR 2022)
+- Resolution: 1024×1024 pixels
+- Dataset: 100 images with diverse prompts (seeds 42-141)
 
-### Video Generation
+**Video Generation (Internal):**
+- Model: Stable Video Diffusion (stabilityai/stable-video-diffusion-img2vid-xt)
+- Paper: "Stable Video Diffusion: Scaling Latent Video Diffusion Models to Large Datasets" (Blattmann et al., arXiv 2311.15127)
+- Status: PREPRINT (not yet peer-reviewed)
+- Resolution: 512×512 pixels, 25 frames
 
-- **Current method**: Procedural frame-based generation (OpenCV)
-- **Placeholder for**: Stable Video Diffusion or similar diffusion models
-- **Resolution**: 256×256 pixels (low-res for fast testing)
-- **Format**: MP4 (H.264 codec)
-- **Duration**: 2-4 seconds at 10 fps (~30 frames)
-- **Determinism**: Seeded with `--seed` + video index
+**Video Generation (External):**
+- Source: Google Veo3.1 (60 videos)
+- Processing: Automatic C2PA signing via prepare_external_videos.py
 
-### C2PA Manifests
+### C2PA Implementation
 
-- **Specification**: C2PA Technical Specification v1.0+ (industry standard)
-- **Library**: c2pa-python (with fallback shim if unavailable)
-- **Manifest contents**:
-  - Claim generator info
-  - Creation timestamp
-  - Actions assertion (c2pa.created)
-  - Hash assertion (placeholder)
-  - Signature info (test keys only)
-  - Asset metadata (seed, model version, etc.)
+- Uses c2patool (v0.24.0+) from contentauth/c2pa-rs
+- Built-in ES256 test certificates for authentic cryptographic signatures
+- Python scripts invoke c2patool via subprocess
+- Verification uses INTEGRITY validation (claimSignature.validated + hash match)
+- Trust validation is informational only (not failure metric)
 
-## External Video Support (Optional)
+### VMAF Alignment Methods
 
-The pipeline supports testing external AI-generated videos from platforms like Sora 2, Runway, Pika, etc.
+The pipeline uses aspect-ratio-aware VMAF calculation:
+- **vmaf_stretched**: Traditional method (scales distorted to reference, may distort aspect)
+- **vmaf_aligned**: Crops/scales reference to match distorted aspect ratio
+- **alignment_method**: same_aspect_ratio, crop_reference_center_square, scale_both_to_minimum
+- Platform transforms (Instagram 16:9→1:1 crop) benefit from aligned metrics
 
-### Adding External Videos
+## Social Media Accounts (Phase 2.5)
 
-1. **Place videos** in `data/raw_out_videos/`
-   - Supported formats: .mp4, .mov, .avi
-   - Minimum resolution: 256×256 pixels
-   - Minimum duration: 1 second
-   - Maximum file size: 500 MB (recommended)
+Research accounts created for platform testing:
 
-2. **Prepare videos** for testing:
-   ```bash
-   python scripts/external/prepare_external_videos.py
-   ```
+- **Instagram**: [@independant_researcher](https://www.instagram.com/independant_researcher/)
+- **Twitter**: [@Independant_R](https://x.com/Independant_R)
+- **Facebook**: [Profile 61583369476134](https://www.facebook.com/profile.php?id=61583369476134)
+- **YouTube**: [UCOwAw40mtHxcMLZG7HyL7fw](https://www.youtube.com/channel/UCOwAw40mtHxcMLZG7HyL7fw)
+- **TikTok**: [@independant_researcher](https://www.tiktok.com/@independant_researcher)
 
-   This script will:
-   - Check if videos already have C2PA manifests
-   - If signed: preserve original manifest
-   - If unsigned: sign with test certificate
-   - Move to `data/manifests/videos/external/`
-
-3. **Automatic integration**
-   - External videos are automatically included in transformation pipeline
-   - Results are merged into `final_metrics.csv` with video_source tracking
-   - Enables comparative analysis between different AI platforms
-
-### Supported External Sources
-
-- OpenAI Sora 2
-- Runway Gen-3
-- Pika Labs
-- Synthesia
-- Any other AI video generation platform
-
-See `data/raw_out_videos/README.md` for detailed instructions.
-
-## Phase 2.5: Social Media Platform Testing
-
-Test C2PA manifest persistence through real-world social media platforms.
-
-### Supported Platforms
-
-- **Instagram**: video, image, story, reel
-- **Twitter**: video, image
-- **Facebook**: video, image
-- **YouTube Shorts**: video
-- **TikTok**: video
-- **WhatsApp**: video, image, status
-
-### Workflow
-
-1. **Prepare uploads**:
-   ```bash
-   python scripts/platform/prepare_platform_uploads.py
-   ```
-   - Interactive menu to select assets
-   - Choose platform and upload mode
-   - Verifies C2PA signature before upload
-   - Generates upload instructions
-
-2. **Manual upload**:
-   - Upload assets to platform via mobile/web app
-   - No filters or editing applied
-
-3. **Manual download**:
-   - Download assets from platform
-   - Save to `data/platform_tests/{platform}/returned/`
-   - Follow naming convention: `{original}__{platform}__{mode}__{timestamp}.{ext}`
-
-4. **Log metadata**:
-   - Record upload/download timestamps in `data/platform_tests/platform_manifest.csv`
-   - Use provided CSV template
-
-5. **Process returns**:
-   ```bash
-   python scripts/platform/process_platform_returns.py
-   ```
-   - Verifies C2PA signatures
-   - Calculates quality metrics (PSNR, SSIM, VMAF)
-   - Generates `data/results/platform_results.csv`
-
-6. **Merge with final results**:
-   ```bash
-   python scripts/metrics/merge_results.py
-   ```
-   - Appends platform results to `final_metrics.csv`
-
-### Expected Outcomes
-
-- Most platforms STRIP C2PA manifests during transcoding
-- Quality degradation varies by platform compression policies
-- Results inform real-world C2PA persistence analysis
-
-See `data/platform_tests/README_PHASE_2.5.md` for detailed instructions.
-
-## Next Steps
-
-After completing the smoke test, the following phases will be implemented:
-
-1. **Transformations** (Phase 2)
-   - JPEG compression at various quality levels
-   - Video re-encoding (H.264, H.265, VP9)
-   - Image editing operations (resize, crop, rotate)
-   - Multi-generation re-encoding
-
-2. **Verification** (Phase 3)
-   - C2PA manifest verification
-   - Cryptographic signature validation
-   - Hash integrity checks
-   - Metrics: VSR, MRR, SVR, HIM, MCR
-
-3. **Analysis** (Phase 4)
-   - Perceptual quality metrics (PSNR, SSIM, VMAF)
-   - Aggregation of results to CSV
-   - Statistical analysis and plotting
-   - HTML report generation
-
-4. **Docker & Reproducibility** (Phase 5)
-   - Complete Dockerfile with CUDA support
-   - Automated pipeline execution
-   - CI/CD integration
+All accounts contain AI-generated content only (no personal data or real individuals).
 
 ## Ethics & Safety
 
-This research pipeline is designed for legitimate provenance testing. Please observe the following:
+This research pipeline is designed for legitimate provenance testing:
 
 - ✅ **Do**: Use for testing C2PA robustness with synthetic content
 - ✅ **Do**: Generate abstract, non-person content for testing
@@ -399,7 +414,7 @@ This research pipeline is designed for legitimate provenance testing. Please obs
 
 - **Stable Diffusion**: Rombach et al., "High-Resolution Image Synthesis with Latent Diffusion Models," CVPR 2022. [arXiv:2112.10752](https://arxiv.org/abs/2112.10752)
 - **C2PA Specification**: Coalition for Content Provenance and Authenticity. [c2pa.org/specifications](https://c2pa.org/specifications/)
-- **c2pa-python**: Python bindings for C2PA. [github.com/contentauth/c2pa-python](https://github.com/contentauth/c2pa-python)
+- **c2patool**: C2PA command-line tool. [github.com/contentauth/c2pa-rs](https://github.com/contentauth/c2pa-rs)
 
 ## License
 
@@ -407,6 +422,6 @@ This is a research project. See individual library licenses for dependencies.
 
 ## Contact
 
-Project Lead: AitchEm
+Project Lead: Hani Moustafa
 
-For questions or issues with this pipeline, please refer to the project documentation or contact the project lead.
+For questions or issues with this pipeline, please refer to the project documentation (CLAUDE.md, FLOW_DIAGRAM.md) or contact the project lead.
