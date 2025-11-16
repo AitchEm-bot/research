@@ -109,6 +109,11 @@ def setup_logging(log_file: Optional[str] = None, level: int = logging.INFO) -> 
     Returns:
         Configured logger instance
     """
+    logger = logging.getLogger()
+
+    # Clear existing handlers to prevent duplicates
+    logger.handlers.clear()
+
     handlers = [logging.StreamHandler()]
 
     if log_file:
@@ -123,7 +128,7 @@ def setup_logging(log_file: Optional[str] = None, level: int = logging.INFO) -> 
         force=True  # Override any existing configuration
     )
 
-    return logging.getLogger()
+    return logger
 
 
 def log_environment_info():

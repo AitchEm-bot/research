@@ -101,19 +101,21 @@ def run_c2patool(asset_path: Path) -> Tuple[Optional[Dict], float]:
 
     except subprocess.TimeoutExpired:
         elapsed_ms = (time.time() - start_time) * 1000
-        logger.error(f"Timeout verifying {asset_path.name}")
+        logger.debug(f"Timeout verifying {asset_path.name}")
         return None, elapsed_ms
     except subprocess.CalledProcessError as e:
         elapsed_ms = (time.time() - start_time) * 1000
-        logger.error(f"c2patool failed for {asset_path.name}: {e.stderr}")
+        # No claim found is expected for transformed assets - don't log as error
+        if "No claim found" not in e.stderr:
+            logger.warning(f"c2patool failed for {asset_path.name}: {e.stderr}")
         return None, elapsed_ms
     except json.JSONDecodeError as e:
         elapsed_ms = (time.time() - start_time) * 1000
-        logger.error(f"Invalid JSON from c2patool for {asset_path.name}: {e}")
+        logger.debug(f"Invalid JSON from c2patool for {asset_path.name}: {e}")
         return None, elapsed_ms
     except Exception as e:
         elapsed_ms = (time.time() - start_time) * 1000
-        logger.error(f"Unexpected error verifying {asset_path.name}: {e}")
+        logger.debug(f"Unexpected error verifying {asset_path.name}: {e}")
         return None, elapsed_ms
 
 
