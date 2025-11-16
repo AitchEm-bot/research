@@ -383,7 +383,7 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
             '-f', 'null', '-'
         ]
 
-        result_stretched = subprocess.run(cmd_stretched, capture_output=True, text=True, timeout=300, check=False)
+        result_stretched = subprocess.run(cmd_stretched, capture_output=True, text=True, timeout=600, check=False)
         match = re.search(r'VMAF score:\s*(\d+\.\d+)', result_stretched.stderr)
         if not match:
             match = re.search(r'"vmaf":\s*(\d+\.\d+)', result_stretched.stderr)
@@ -441,7 +441,7 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
                 '-f', 'null', '-'
             ]
 
-            result_aligned = subprocess.run(cmd_aligned, capture_output=True, text=True, timeout=300, check=False)
+            result_aligned = subprocess.run(cmd_aligned, capture_output=True, text=True, timeout=600, check=False)
             match_aligned = re.search(r'VMAF score:\s*(\d+\.\d+)', result_aligned.stderr)
             if not match_aligned:
                 match_aligned = re.search(r'"vmaf":\s*(\d+\.\d+)', result_aligned.stderr)
