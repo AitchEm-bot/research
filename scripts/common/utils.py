@@ -63,6 +63,12 @@ DIRS = {
     # Results (all CSV outputs and logs)
     'results': DATA_DIR / "results",
     'results_logs': DATA_DIR / "results/logs",
+
+    # Phase 4: Analysis results directories
+    'results_csv': DATA_DIR / "results/csv",
+    'analysis_results': DATA_DIR / "results/analysis_results",
+    'analysis_csv': DATA_DIR / "results/analysis_results/csv",
+    'analysis_plots': DATA_DIR / "results/analysis_results/plots",
 }
 
 # C2PA tool configuration
