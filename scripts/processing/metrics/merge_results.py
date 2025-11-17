@@ -50,10 +50,10 @@ logger = utils.setup_logging(log_file='data/results/logs/merge_results.log')
 utils.log_environment_info()
 
 # Configuration - using shared constants
-C2PA_CSV = utils.DIRS['results'] / "c2pa_validation.csv"
-QUALITY_CSV = utils.DIRS['results'] / "quality_metrics.csv"
-PLATFORM_CSV = utils.DIRS['results'] / "platform_results.csv"  # Phase 2.5 optional input
-OUTPUT_CSV = utils.DIRS['results'] / "final_metrics.csv"
+C2PA_CSV = utils.DIRS['results_csv'] / "c2pa_validation.csv"
+QUALITY_CSV = utils.DIRS['results_csv'] / "quality_metrics.csv"
+PLATFORM_CSV = utils.DIRS['results_csv'] / "platform_results.csv"  # Phase 2.5 optional input
+OUTPUT_CSV = utils.DIRS['results_csv'] / "final_metrics.csv"
 
 # Final CSV column schema (matches CLAUDE.md specification + Phase 2.5/4 enhancements)
 # Combines C2PA verification, quality metrics, and optional platform testing data

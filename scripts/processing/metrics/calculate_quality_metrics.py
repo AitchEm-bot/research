@@ -129,7 +129,7 @@ def find_original_asset(transformed_path: Path) -> Optional[Path]:
     return utils.find_original_asset(transformed_path, manifests_dirs)
 
 
-def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tuple[Optional[str], Optional[float], Optional[str], Optional[float], str, int, Optional[str], float]:
+def calculate_image_metrics(original_path: Path, transformed_path: Path, transform_type: Optional[str] = None) -> Tuple[Optional[str], Optional[float], Optional[str], Optional[float], str, int, Optional[str], float]:
     """
     Calculate PSNR and SSIM for image pair (both stretched and aligned versions).
 
@@ -145,6 +145,7 @@ def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tupl
     Args:
         original_path: Path to original signed image
         transformed_path: Path to transformed image
+        transform_type: Optional transform type from filename metadata (e.g., 'resize', 'crop')
 
     Returns:
         Tuple of (psnr, ssim, psnr_aligned, ssim_aligned, alignment_method, lossless_match, error_message, processing_time_ms)
@@ -212,19 +213,60 @@ def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tupl
 
         # ========== ALIGNED METRICS ==========
         if aspect_changed:
-            # Aspect ratio changed - crop original to match transformed AR
-            if orig_w > orig_h and trans_w == trans_h:
+            # Check if this is a resize transform (full frame scale) or actual crop
+            is_resize_transform = transform_type == 'resize'
+            is_rotation_transform = transform_type == 'rotate'
+
+            if is_resize_transform or is_rotation_transform:
+                # Resize and rotation transforms preserve full frame - no content is cropped
+                # Use same metrics as stretched (no alignment needed)
+                psnr_aligned = psnr
+                ssim_aligned = ssim
+                alignment_method = 'same_aspect_ratio'
+                logger.debug(f"{transformed_path.name}: Using same_aspect_ratio for {transform_type} transform")
+            elif orig_w > orig_h and trans_w == trans_h:
                 # Horizontal to square: center-crop original width
+                # This handles actual crop transforms or platform square crops
                 crop_w = orig_h
                 crop_x = (orig_w - crop_w) // 2
                 img_orig_cropped = img_orig[:, crop_x:crop_x+crop_w]
                 alignment_method = 'crop_reference_center_square'
+
+                # Resize transformed to match cropped original
+                img_trans_aligned = cv2.resize(img_trans, (img_orig_cropped.shape[1], img_orig_cropped.shape[0]), interpolation=cv2.INTER_CUBIC)
+
+                # Calculate aligned PSNR
+                psnr_aligned_value = cv2.PSNR(img_orig_cropped, img_trans_aligned)
+                if psnr_aligned_value >= 100.0:
+                    psnr_aligned = "inf"
+                else:
+                    psnr_aligned = f"{psnr_aligned_value:.4f}"
+
+                # Calculate aligned SSIM
+                gray_orig_cropped = cv2.cvtColor(img_orig_cropped, cv2.COLOR_BGR2GRAY)
+                gray_trans_aligned = cv2.cvtColor(img_trans_aligned, cv2.COLOR_BGR2GRAY)
+                ssim_aligned = calculate_ssim(gray_orig_cropped, gray_trans_aligned)
             elif orig_h > orig_w and trans_w == trans_h:
                 # Vertical to square: center-crop original height
                 crop_h = orig_w
                 crop_y = (orig_h - crop_h) // 2
                 img_orig_cropped = img_orig[crop_y:crop_y+crop_h, :]
                 alignment_method = 'crop_reference_center_square'
+
+                # Resize transformed to match cropped original
+                img_trans_aligned = cv2.resize(img_trans, (img_orig_cropped.shape[1], img_orig_cropped.shape[0]), interpolation=cv2.INTER_CUBIC)
+
+                # Calculate aligned PSNR
+                psnr_aligned_value = cv2.PSNR(img_orig_cropped, img_trans_aligned)
+                if psnr_aligned_value >= 100.0:
+                    psnr_aligned = "inf"
+                else:
+                    psnr_aligned = f"{psnr_aligned_value:.4f}"
+
+                # Calculate aligned SSIM
+                gray_orig_cropped = cv2.cvtColor(img_orig_cropped, cv2.COLOR_BGR2GRAY)
+                gray_trans_aligned = cv2.cvtColor(img_trans_aligned, cv2.COLOR_BGR2GRAY)
+                ssim_aligned = calculate_ssim(gray_orig_cropped, gray_trans_aligned)
             else:
                 # Generic aspect ratio change: scale both to minimum dimensions
                 common_w = min(orig_w, trans_w)
@@ -233,24 +275,17 @@ def calculate_image_metrics(original_path: Path, transformed_path: Path) -> Tupl
                 img_trans_aligned = cv2.resize(img_trans, (common_w, common_h), interpolation=cv2.INTER_CUBIC)
                 alignment_method = 'scale_both_to_minimum'
 
-            # Resize both to same dimensions if needed
-            if alignment_method != 'scale_both_to_minimum':
-                # Resize transformed to match cropped original
-                img_trans_aligned = cv2.resize(img_trans, (img_orig_cropped.shape[1], img_orig_cropped.shape[0]), interpolation=cv2.INTER_CUBIC)
-            else:
-                img_orig_cropped = img_orig_cropped  # Already resized above
+                # Calculate aligned PSNR
+                psnr_aligned_value = cv2.PSNR(img_orig_cropped, img_trans_aligned)
+                if psnr_aligned_value >= 100.0:
+                    psnr_aligned = "inf"
+                else:
+                    psnr_aligned = f"{psnr_aligned_value:.4f}"
 
-            # Calculate aligned PSNR
-            psnr_aligned_value = cv2.PSNR(img_orig_cropped, img_trans_aligned)
-            if psnr_aligned_value >= 100.0:
-                psnr_aligned = "inf"
-            else:
-                psnr_aligned = f"{psnr_aligned_value:.4f}"
-
-            # Calculate aligned SSIM
-            gray_orig_cropped = cv2.cvtColor(img_orig_cropped, cv2.COLOR_BGR2GRAY)
-            gray_trans_aligned = cv2.cvtColor(img_trans_aligned, cv2.COLOR_BGR2GRAY)
-            ssim_aligned = calculate_ssim(gray_orig_cropped, gray_trans_aligned)
+                # Calculate aligned SSIM
+                gray_orig_cropped = cv2.cvtColor(img_orig_cropped, cv2.COLOR_BGR2GRAY)
+                gray_trans_aligned = cv2.cvtColor(img_trans_aligned, cv2.COLOR_BGR2GRAY)
+                ssim_aligned = calculate_ssim(gray_orig_cropped, gray_trans_aligned)
 
         else:
             # Same aspect ratio - aligned = stretched
@@ -308,7 +343,7 @@ def get_video_properties(video_path: Path) -> Optional[Tuple[int, int, str]]:
         return None
 
 
-def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[Optional[float], Optional[float], Optional[str], Optional[str], float]:
+def calculate_video_vmaf(original_path: Path, transformed_path: Path, transform_type: Optional[str] = None) -> Tuple[Optional[float], Optional[float], Optional[str], Optional[str], float]:
     """
     Calculate comprehensive VMAF scores for video pair with aspect ratio handling.
 
@@ -323,6 +358,7 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
     Args:
         original_path: Path to original signed video (reference)
         transformed_path: Path to transformed video (distorted)
+        transform_type: Optional transform type from filename metadata (e.g., 'resize', 'crop')
 
     Returns:
         Tuple of (vmaf, vmaf_aligned, vmaf_method, error_message, processing_time_ms)
@@ -392,9 +428,20 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
 
         # VMAF 2: Aligned (intelligent cropping/scaling)
         if aspect_changed:
-            # Aspect ratio changed - likely editing transform cropped the video
-            if ref_width > ref_height and dist_width == dist_height:
+            # Check if this is a resize transform (full frame scale) or actual crop
+            is_resize_transform = transform_type == 'resize'
+            is_rotation_transform = transform_type == 'rotate'
+
+            if is_resize_transform or is_rotation_transform:
+                # Resize and rotation transforms scale/rotate the entire frame - no content is cropped
+                # Both videos have same field of view, just different resolution/orientation
+                # Use same alignment as traditional VMAF (no cropping needed)
+                vmaf_aligned = vmaf
+                method = 'same_aspect_ratio'
+                logger.debug(f"{transformed_path.name}: Using same_aspect_ratio for {transform_type} transform")
+            elif ref_width > ref_height and dist_width == dist_height:
                 # Horizontal to square crop - center crop reference
+                # This handles actual crop transforms or platform square crops
                 crop_width = ref_height
                 crop_x = (ref_width - crop_width) // 2
                 method = 'crop_reference_center_square'
@@ -406,6 +453,21 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
                     f"[0:v]fps={dist_fps},format=yuv420p,setpts=PTS-STARTPTS[dist];"
                     f"[dist][ref]libvmaf=log_fmt=json:log_path=NUL"
                 )
+
+                cmd_aligned = [
+                    'ffmpeg',
+                    '-i', str(transformed_path),
+                    '-i', str(original_path),
+                    '-lavfi', filter_chain_aligned,
+                    '-f', 'null', '-'
+                ]
+
+                result_aligned = subprocess.run(cmd_aligned, capture_output=True, text=True, timeout=600, check=False)
+                match_aligned = re.search(r'VMAF score:\s*(\d+\.\d+)', result_aligned.stderr)
+                if not match_aligned:
+                    match_aligned = re.search(r'"vmaf":\s*(\d+\.\d+)', result_aligned.stderr)
+                if match_aligned:
+                    vmaf_aligned = float(match_aligned.group(1))
             elif ref_height > ref_width and dist_width == dist_height:
                 # Vertical to square crop - center crop reference
                 crop_height = ref_width
@@ -419,6 +481,21 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
                     f"[0:v]fps={dist_fps},format=yuv420p,setpts=PTS-STARTPTS[dist];"
                     f"[dist][ref]libvmaf=log_fmt=json:log_path=NUL"
                 )
+
+                cmd_aligned = [
+                    'ffmpeg',
+                    '-i', str(transformed_path),
+                    '-i', str(original_path),
+                    '-lavfi', filter_chain_aligned,
+                    '-f', 'null', '-'
+                ]
+
+                result_aligned = subprocess.run(cmd_aligned, capture_output=True, text=True, timeout=600, check=False)
+                match_aligned = re.search(r'VMAF score:\s*(\d+\.\d+)', result_aligned.stderr)
+                if not match_aligned:
+                    match_aligned = re.search(r'"vmaf":\s*(\d+\.\d+)', result_aligned.stderr)
+                if match_aligned:
+                    vmaf_aligned = float(match_aligned.group(1))
             else:
                 # Unknown aspect ratio change - scale both to smaller dimension
                 common_width = min(ref_width, dist_width)
@@ -433,20 +510,20 @@ def calculate_video_vmaf(original_path: Path, transformed_path: Path) -> Tuple[O
                     f"[dist][ref]libvmaf=log_fmt=json:log_path=NUL"
                 )
 
-            cmd_aligned = [
-                'ffmpeg',
-                '-i', str(transformed_path),
-                '-i', str(original_path),
-                '-lavfi', filter_chain_aligned,
-                '-f', 'null', '-'
-            ]
+                cmd_aligned = [
+                    'ffmpeg',
+                    '-i', str(transformed_path),
+                    '-i', str(original_path),
+                    '-lavfi', filter_chain_aligned,
+                    '-f', 'null', '-'
+                ]
 
-            result_aligned = subprocess.run(cmd_aligned, capture_output=True, text=True, timeout=600, check=False)
-            match_aligned = re.search(r'VMAF score:\s*(\d+\.\d+)', result_aligned.stderr)
-            if not match_aligned:
-                match_aligned = re.search(r'"vmaf":\s*(\d+\.\d+)', result_aligned.stderr)
-            if match_aligned:
-                vmaf_aligned = float(match_aligned.group(1))
+                result_aligned = subprocess.run(cmd_aligned, capture_output=True, text=True, timeout=600, check=False)
+                match_aligned = re.search(r'VMAF score:\s*(\d+\.\d+)', result_aligned.stderr)
+                if not match_aligned:
+                    match_aligned = re.search(r'"vmaf":\s*(\d+\.\d+)', result_aligned.stderr)
+                if match_aligned:
+                    vmaf_aligned = float(match_aligned.group(1))
         else:
             # Same aspect ratio - aligned = vmaf
             vmaf_aligned = vmaf
@@ -508,6 +585,10 @@ def process_single_asset(transformed_path: Path) -> Dict:
     # Detect media source
     media_source = utils.detect_media_source(transformed_path.name)
 
+    # Extract transform type from filename metadata
+    metadata = utils.extract_metadata_from_filename(filename)
+    transform_type = metadata.get('transform_type', None)
+
     if original_path is None:
         return {
             'filename': transformed_path.name,
@@ -531,7 +612,7 @@ def process_single_asset(transformed_path: Path) -> Dict:
 
     # Calculate appropriate metrics based on asset type
     if asset_type == 'image':
-        psnr, ssim, psnr_aligned, ssim_aligned, alignment_method, lossless_match, error, proc_time = calculate_image_metrics(original_path, transformed_path)
+        psnr, ssim, psnr_aligned, ssim_aligned, alignment_method, lossless_match, error, proc_time = calculate_image_metrics(original_path, transformed_path, transform_type=transform_type)
 
         return {
             'filename': transformed_path.name,
@@ -553,7 +634,7 @@ def process_single_asset(transformed_path: Path) -> Dict:
             'timestamp': datetime.now().isoformat()
         }
     else:
-        vmaf, vmaf_aligned, vmaf_method, error, proc_time = calculate_video_vmaf(original_path, transformed_path)
+        vmaf, vmaf_aligned, vmaf_method, error, proc_time = calculate_video_vmaf(original_path, transformed_path, transform_type=transform_type)
 
         return {
             'filename': transformed_path.name,
