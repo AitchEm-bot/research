@@ -8,15 +8,15 @@ This project implements an end-to-end, reproducible research pipeline to test th
 
 ## Project Status
 
-**Current Phase**: Phase 4 - Analysis & Visualization
+**Current Phase**: Phase 5 - Dockerization & Reproducibility ✅
 
 Pipeline completion status:
 - ✅ Phase 1: Generation & C2PA Embedding (100 images, 110 videos)
 - ✅ Phase 2: Transformations & Compression (~3,460 transformed assets)
 - ✅ Phase 2.5: Social Media Round-Trip Testing (160 platform samples)
 - ✅ Phase 3: Verification & Metric Computation (final_metrics.csv generated)
-- ⏳ Phase 4: Data Analysis & Visualization
-- ⏳ Phase 5: Dockerization & Reproducibility
+- ✅ Phase 4: Data Analysis & Visualization
+- ✅ Phase 5: Dockerization & Reproducibility
 - ⏳ Phase 6: Paper-Ready Artifacts & Documentation
 
 ## Project Structure
@@ -57,6 +57,8 @@ research/
 │       ├── final_metrics.csv        # Merged comprehensive results (~3,620 rows)
 │       └── logs/                    # All execution logs
 ├── scripts/
+│   ├── run_pipeline.py              # 🐳 Master orchestrator for Docker (Phase 5)
+│   ├── docker_entrypoint.sh         # 🐳 Docker container startup script
 │   ├── common/                      # Shared utilities
 │   │   └── utils.py                 # Centralized functions (logging, CSV, paths)
 │   ├── c2pa/                        # C2PA operations
@@ -86,9 +88,14 @@ research/
 │               ├── process_platform_returns.py
 │               ├── rename_platform_returns.py
 │               └── rename_platform_uploads.py
+├── Dockerfile                       # 🐳 Docker image definition (CUDA 12.6 + Ubuntu 24.04)
+├── docker-compose.yml               # 🐳 Docker Compose configuration
+├── .dockerignore                    # 🐳 Docker build context optimization
+├── .env.example                     # 🐳 Environment variable template
 ├── CLAUDE.md                        # Project memory & agent constraints
 ├── FLOW_DIAGRAM.md                  # Pipeline visualization
-└── README.md                        # This file
+├── README.md                        # This file
+└── README_DOCKER.md                 # 🐳 Complete Docker deployment guide (1,357 lines)
 ```
 
 ## Research Pipeline Phases
@@ -337,44 +344,153 @@ python scripts/processing/preprocessing/platform/process_platform_returns.py
 python scripts/processing/metrics/merge_results.py
 ```
 
-## 🐳 Docker Support (Phase 5)
+## 🐳 Docker Support (Phase 5) ✅
 
-Run the entire pipeline in a reproducible containerized environment:
+**Status**: Complete and production-ready
 
-### Quick Docker Setup
+Run the entire pipeline in a reproducible containerized environment with full GPU acceleration. Docker ensures identical results across different machines, eliminating dependency conflicts and simplifying deployment.
+
+### Quick Start
 
 ```bash
 # 1. Build the Docker image
 docker build -t c2pa-research .
 
-# 2. Run complete pipeline
-docker-compose up
+# 2. Run test pipeline (10-20 minutes)
+docker run --rm --gpus all \
+  -v $(pwd)/data:/workspace/data \
+  c2pa-research run-all --test
 
-# 3. Run specific phase
-docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase3
+# 3. Run complete pipeline (4-8 hours)
+docker run --gpus all \
+  -v $(pwd)/data:/workspace/data \
+  -v huggingface-cache:/workspace/.cache/huggingface \
+  --name c2pa-production \
+  c2pa-research run-all
 
-# 4. Run in test mode (faster)
-docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research run-all --test
+# 4. Access results
+cat data/results/csv/final_metrics.csv
+# Or open in Excel: start excel data/results/csv/final_metrics.csv
 ```
 
-### Docker Features
+### Key Features
 
-- **CUDA 12.1 Support**: Full GPU acceleration with optimized memory settings
-- **Master Orchestrator**: New `run_pipeline.py` script for coordinated execution
-- **Volume Persistence**: Data and model caches persist across container runs
-- **Environment Variables**: Configurable via `.env` file
-- **Checkpoint System**: Resume pipeline from any phase
+- ✅ **CUDA 12.6 Support**: Full GPU acceleration (RTX 4060 optimized, 8GB VRAM)
+- ✅ **Master Orchestrator**: `run_pipeline.py` coordinates all 5 phases with progress tracking
+- ✅ **Volume Persistence**: Files persist on local machine via volume mounting
+- ✅ **Model Caching**: Named volumes prevent re-downloading models (4+ GB)
+- ✅ **Checkpoint System**: Resume from any phase if interrupted
+- ✅ **Environment Configuration**: `.env` file for GPU memory settings
+- ✅ **Cross-Platform**: Works on Windows (WSL2), Linux, macOS
 
-### Docker Files Created
+### Docker Environment
 
-- `Dockerfile`: CUDA-enabled container with all dependencies
-- `docker-compose.yml`: GPU configuration and volume management
-- `scripts/run_pipeline.py`: Master pipeline orchestrator
-- `.dockerignore`: Optimized build context
-- `.env.example`: Environment variable template
-- `README_DOCKER.md`: Complete Docker documentation
+**Image Details:**
+- Base: `nvidia/cuda:12.6.0-cudnn-runtime-ubuntu24.04`
+- Python: 3.12.3
+- PyTorch: 2.5.1 with CUDA 12.1 support
+- Size: ~16 GB (includes all dependencies)
+- Dependencies: Pre-installed PyTorch, Diffusers, FFmpeg, c2patool integration
 
-See [README_DOCKER.md](README_DOCKER.md) for detailed Docker instructions.
+**Files Created:**
+- `Dockerfile` (135 lines): Multi-stage build with CUDA support
+- `docker-compose.yml` (83 lines): GPU configuration and volume management
+- `scripts/run_pipeline.py` (532 lines): Master orchestrator with checkpoint system
+- `scripts/docker_entrypoint.sh` (175 lines): Environment validation and startup
+- `.dockerignore` (79 lines): Optimized build context
+- `.env.example` (94 lines): Environment variable template
+- `README_DOCKER.md` (1,357 lines): **Comprehensive deployment guide**
+
+### Volume Mounting (Critical!)
+
+**⚠️ Important**: Always use `-v` volume mounting to persist results:
+
+```bash
+# ✅ GOOD - Results saved to your machine
+docker run --gpus all \
+  -v $(pwd)/data:/workspace/data \
+  c2pa-research run-all --test
+
+# ❌ BAD - Results trapped inside container and lost!
+docker run --gpus all c2pa-research run-all --test
+```
+
+**What happens with volume mounting:**
+```
+Container creates:              Your local machine:
+/workspace/data/results/     ⟺  C:\Users\you\research\data\results\
+  └─ final_metrics.csv          ✅ Appears instantly
+                                ✅ Persists after container stops
+                                ✅ Open in Excel, pandas, etc.
+```
+
+### Available Commands
+
+```bash
+# Show help
+docker run --rm c2pa-research --help
+
+# Run specific phase
+docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase1
+docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase2
+docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase3
+
+# Resume from checkpoint
+docker run --gpus all -v $(pwd)/data:/workspace/data \
+  c2pa-research run-all --resume-from 2
+
+# Check pipeline status
+docker run --rm -v $(pwd)/data:/workspace/data c2pa-research status
+
+# Interactive shell
+docker run --rm -it --gpus all \
+  -v $(pwd)/data:/workspace/data \
+  c2pa-research bash
+```
+
+### Using Docker Compose (Recommended)
+
+```bash
+# Start pipeline in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop pipeline
+docker-compose down
+```
+
+### Expected Performance
+
+**RTX 4060 8GB benchmarks:**
+- Test mode: 10-20 minutes
+- Full mode: 4-8 hours
+- Disk usage: ~16 GB (image) + ~5 GB (models) + ~20 GB (results)
+
+### Troubleshooting
+
+**"No files in data/ directory"**
+→ You forgot volume mounting! Add `-v $(pwd)/data:/workspace/data`
+
+**"CUDA out of memory"**
+→ Reduce memory: `-e PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256`
+
+**"Could not select device driver"**
+→ Windows: Enable WSL2 in Docker Desktop
+→ Linux: Install nvidia-container-toolkit
+
+### Complete Documentation
+
+See **[README_DOCKER.md](README_DOCKER.md)** for comprehensive guide including:
+- Prerequisites and system requirements
+- Step-by-step deployment instructions
+- Understanding Docker concepts (images, containers, volumes)
+- File storage and persistence explained
+- Accessing and analyzing results
+- GPU configuration and optimization
+- Troubleshooting common issues
+- Best practices for reproducibility
 
 ## Testing & Debugging
 
