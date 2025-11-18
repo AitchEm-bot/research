@@ -90,43 +90,63 @@ def run_data_analysis():
     return results
 
 
-def run_visualizations():
-    """Execute all visualization modules."""
+def run_visualizations(publication_mode=False):
+    """Execute all visualization modules.
+
+    Args:
+        publication_mode: If True, generate clean publication figures (F1-F8).
+                         If False, generate exploratory plots with full annotations.
+    """
     logger.info("\n" + "=" * 60)
-    logger.info("PHASE 4: VISUALIZATION")
-    logger.info("=" * 60)
 
-    # Import all visualization modules
-    from scripts.analysis.visualization import (
-        plot_manifest_retention,
-        plot_quality_metrics,
-        plot_vmaf_comparison,
-        plot_correlation_heatmap
-    )
+    if publication_mode:
+        logger.info("PHASE 4: PUBLICATION FIGURES")
+        logger.info("=" * 60)
+        logger.info("Generating clean figures for publication (F1-F8)...")
 
-    # 1. Create manifest retention plots
-    logger.info("\n[1/4] Creating manifest retention plots...")
-    start_time = time.time()
-    plot_manifest_retention.create_all_retention_plots()
-    logger.info(f"Done - Retention plots complete in {time.time() - start_time:.1f}s")
+        # Import publication figures module
+        from scripts.analysis.visualization import publication_figures
 
-    # 2. Create quality metrics plots
-    logger.info("\n[2/4] Creating quality metrics plots...")
-    start_time = time.time()
-    plot_quality_metrics.create_all_quality_plots()
-    logger.info(f"Done - Quality plots complete in {time.time() - start_time:.1f}s")
+        start_time = time.time()
+        publication_figures.generate_all_figures()
+        logger.info(f"Done - Publication figures complete in {time.time() - start_time:.1f}s")
 
-    # 3. Create VMAF comparison plots
-    logger.info("\n[3/4] Creating VMAF comparison plots...")
-    start_time = time.time()
-    plot_vmaf_comparison.create_all_vmaf_plots()
-    logger.info(f"Done - VMAF plots complete in {time.time() - start_time:.1f}s")
+    else:
+        logger.info("PHASE 4: EXPLORATORY VISUALIZATION")
+        logger.info("=" * 60)
+        logger.info("Generating detailed exploratory plots...")
 
-    # 4. Create correlation heatmap
-    logger.info("\n[4/4] Creating correlation heatmap...")
-    start_time = time.time()
-    plot_correlation_heatmap.create_correlation_plots()
-    logger.info(f"Done - Correlation plots complete in {time.time() - start_time:.1f}s")
+        # Import all visualization modules
+        from scripts.analysis.visualization import (
+            plot_manifest_retention,
+            plot_quality_metrics,
+            plot_vmaf_comparison,
+            plot_correlation_heatmap
+        )
+
+        # 1. Create manifest retention plots
+        logger.info("\n[1/4] Creating manifest retention plots...")
+        start_time = time.time()
+        plot_manifest_retention.create_all_retention_plots()
+        logger.info(f"Done - Retention plots complete in {time.time() - start_time:.1f}s")
+
+        # 2. Create quality metrics plots
+        logger.info("\n[2/4] Creating quality metrics plots...")
+        start_time = time.time()
+        plot_quality_metrics.create_all_quality_plots()
+        logger.info(f"Done - Quality plots complete in {time.time() - start_time:.1f}s")
+
+        # 3. Create VMAF comparison plots
+        logger.info("\n[3/4] Creating VMAF comparison plots...")
+        start_time = time.time()
+        plot_vmaf_comparison.create_all_vmaf_plots()
+        logger.info(f"Done - VMAF plots complete in {time.time() - start_time:.1f}s")
+
+        # 4. Create correlation heatmap
+        logger.info("\n[4/4] Creating correlation heatmap...")
+        start_time = time.time()
+        plot_correlation_heatmap.create_correlation_plots()
+        logger.info(f"Done - Correlation plots complete in {time.time() - start_time:.1f}s")
 
 
 def generate_final_report(results: dict):
@@ -258,6 +278,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run Phase 4 Analysis Pipeline")
     parser.add_argument('--skip-viz', action='store_true',
                        help='Skip visualization generation')
+    parser.add_argument('--publication-figures', action='store_true',
+                       help='Generate clean publication figures (F1-F8) instead of exploratory plots')
     args = parser.parse_args()
 
     # Start timing
@@ -281,7 +303,7 @@ def main():
 
         # Run visualizations (unless skipped)
         if not args.skip_viz:
-            run_visualizations()
+            run_visualizations(publication_mode=args.publication_figures)
         else:
             logger.info("\nSkipping visualizations (--skip-viz flag)")
 
