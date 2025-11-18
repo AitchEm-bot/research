@@ -38,7 +38,7 @@ logger = utils.setup_logging(log_file='data/prepared_assets/transformed/transfor
 utils.log_environment_info()
 
 # Configuration - using shared constants
-INPUT_DIR = utils.DIRS['manifests_images']
+INPUT_DIR = utils.DIRS['signed_images']
 OUTPUT_BASE_DIR = utils.DIRS["compression_images"]
 JPEG_QUALITIES = [95, 75, 50, 25]
 PNG_COMPRESS_LEVELS = [9, 0]  # 9 = max compression, 0 = no compression

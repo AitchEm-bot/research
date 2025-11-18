@@ -49,9 +49,9 @@ DIRS = {
     'raw_out_videos': DATA_DIR / "assets/raw_out_videos",
 
     # Prepared assets (processed)
-    'manifests_images': DATA_DIR / "prepared_assets/manifests/images",
-    'manifests_videos_internal': DATA_DIR / "prepared_assets/manifests/videos/internal",
-    'manifests_videos_external': DATA_DIR / "prepared_assets/manifests/videos/external",
+    'signed_images': DATA_DIR / "prepared_assets/signed_assets/images",
+    'signed_videos_internal': DATA_DIR / "prepared_assets/signed_assets/videos/internal",
+    'signed_videos_external': DATA_DIR / "prepared_assets/signed_assets/videos/external",
     'c2pa_manifests': DATA_DIR / "prepared_assets/c2pa_manifests",
     'transformed': DATA_DIR / "prepared_assets/transformed",
     'compression_images': DATA_DIR / "prepared_assets/transformed/compression/images",
@@ -307,21 +307,21 @@ def run_command(
 
 # ==================== FILE OPERATIONS ====================
 
-def find_original_asset(transformed_path: Path, manifests_dirs: Optional[Dict] = None) -> Optional[Path]:
+def find_original_asset(transformed_path: Path, signed_dirs: Optional[Dict] = None) -> Optional[Path]:
     """
     Find the original signed asset for a transformed file.
 
     Args:
         transformed_path: Path to transformed asset
-        manifests_dirs: Optional dict of manifest directories to search
+        signed_dirs: Optional dict of signed asset directories to search
 
     Returns:
         Path to original signed asset, or None if not found
     """
-    if manifests_dirs is None:
-        manifests_dirs = {
-            'images': [DIRS['manifests_images']],
-            'videos': [DIRS['manifests_videos_internal'], DIRS['manifests_videos_external']]
+    if signed_dirs is None:
+        signed_dirs = {
+            'images': [DIRS['signed_images']],
+            'videos': [DIRS['signed_videos_internal'], DIRS['signed_videos_external']]
         }
 
     filename = transformed_path.name
@@ -335,10 +335,10 @@ def find_original_asset(transformed_path: Path, manifests_dirs: Optional[Dict] =
     # Determine asset type and search directories
     if transformed_path.suffix.lower() in ['.png', '.jpg', '.jpeg']:
         original_filename = f"{base}_signed.png"
-        search_dirs = manifests_dirs.get('images', [])
+        search_dirs = signed_dirs.get('images', [])
     else:
         original_filename = f"{base}_signed.mp4"
-        search_dirs = manifests_dirs.get('videos', [])
+        search_dirs = signed_dirs.get('videos', [])
 
     # Search for original file
     for search_dir in search_dirs:

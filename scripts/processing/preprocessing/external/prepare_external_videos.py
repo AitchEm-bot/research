@@ -4,13 +4,13 @@ External Video Preparation Script for C2PA Robustness Testing
 
 This script processes externally-generated videos (Sora 2, Runway, etc.) from the
 raw_out_videos/ folder, signs them with C2PA manifests if needed, and moves them
-to the organized manifest structure for transformation testing.
+to the organized signed assets structure for transformation testing.
 
 Workflow:
 1. Scan data/assets/raw_out_videos/ for video files (.mp4, .mov, .avi)
 2. Check each video's C2PA signature status using c2patool
 3. Sign unsigned videos with C2PA manifests using built-in test certificates
-4. Move signed videos to data/prepared_assets/manifests/videos/external/
+4. Move signed videos to data/prepared_assets/signed_assets/videos/external/
 5. Generate detailed processing log
 
 Research Context:
@@ -50,7 +50,7 @@ utils.log_environment_info()
 
 # Configuration
 RAW_VIDEOS_DIR = Path("data/assets/raw_out_videos")
-OUTPUT_DIR = Path("data/prepared_assets/manifests/videos/external")
+OUTPUT_DIR = Path("data/prepared_assets/signed_assets/videos/external")
 SUPPORTED_EXTENSIONS = ['.mp4', '.mov', '.avi']
 
 # C2PA configuration (reused from embed_c2pa_v2.py)

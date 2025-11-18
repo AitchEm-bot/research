@@ -17,7 +17,7 @@ Implementation Method:
   cryptographic signatures, suitable for robustness research without requiring CA infrastructure.
 
 Usage:
-  python embed_c2pa_v2.py --images-dir data/assets/raw_images/ --videos-dir data/assets/raw_videos/ --output-dir data/prepared_assets/manifests/
+  python embed_c2pa_v2.py --images-dir data/assets/raw_images/ --videos-dir data/assets/raw_videos/ --output-dir data/prepared_assets/signed_assets/
 """
 
 import argparse
@@ -457,7 +457,7 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("data/prepared_assets/manifests"),
+        default=Path("data/prepared_assets/signed_assets"),
         help="Output directory for signed assets"
     )
     parser.add_argument(

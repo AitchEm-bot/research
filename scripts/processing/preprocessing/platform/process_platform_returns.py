@@ -55,10 +55,10 @@ utils.log_environment_info()
 # Configuration - using shared constants
 PLATFORM_TESTS_BASE = utils.DIRS['platform_tests']
 RESULTS_DIR = utils.DIRS['results']
-MANIFESTS_IMAGES_DIR = utils.DIRS['manifests_images']
-MANIFESTS_VIDEOS_DIRS = [
-    utils.DIRS['manifests_videos_internal'],
-    utils.DIRS['manifests_videos_external']
+SIGNED_IMAGES_DIR = utils.DIRS['signed_images']
+SIGNED_VIDEOS_DIRS = [
+    utils.DIRS['signed_videos_internal'],
+    utils.DIRS['signed_videos_external']
 ]
 TRANSFORMED_BASE = utils.DATA_DIR / "transformed"
 C2PATOOL_PATH = Path(utils.C2PATOOL_CMD)
@@ -152,7 +152,7 @@ def find_original_asset(base_filename: str, asset_type: str) -> Optional[Path]:
     if asset_type == 'image':
         # Look for the exact filename + .png extension
         original_filename = f"{base_filename}.png"
-        original_path = MANIFESTS_IMAGES_DIR / original_filename
+        original_path = SIGNED_IMAGES_DIR / original_filename
         if original_path.exists():
             return original_path
 
@@ -161,7 +161,7 @@ def find_original_asset(base_filename: str, asset_type: str) -> Optional[Path]:
     else:
         # Look for the exact filename + .mp4 extension
         original_filename = f"{base_filename}.mp4"
-        for video_dir in MANIFESTS_VIDEOS_DIRS:
+        for video_dir in SIGNED_VIDEOS_DIRS:
             original_path = video_dir / original_filename
             if original_path.exists():
                 return original_path

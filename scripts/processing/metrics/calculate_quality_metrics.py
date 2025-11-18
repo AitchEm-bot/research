@@ -48,10 +48,10 @@ utils.log_environment_info()
 
 # Configuration - using shared constants
 TRANSFORMED_BASE_DIR = utils.DIRS['transformed']
-MANIFESTS_IMAGES_DIR = utils.DIRS['manifests_images']
-MANIFESTS_VIDEOS_DIRS = [
-    utils.DIRS['manifests_videos_internal'],
-    utils.DIRS['manifests_videos_external']
+SIGNED_IMAGES_DIR = utils.DIRS['signed_images']
+SIGNED_VIDEOS_DIRS = [
+    utils.DIRS['signed_videos_internal'],
+    utils.DIRS['signed_videos_external']
 ]
 OUTPUT_CSV = utils.DIRS['results'] / "quality_metrics.csv"
 
@@ -122,11 +122,11 @@ def calculate_ssim(img1: np.ndarray, img2: np.ndarray) -> float:
 # Use shared find_original_asset function
 def find_original_asset(transformed_path: Path) -> Optional[Path]:
     """Find the original signed asset using shared utility."""
-    manifests_dirs = {
-        'images': [MANIFESTS_IMAGES_DIR],
-        'videos': MANIFESTS_VIDEOS_DIRS
+    signed_dirs = {
+        'images': [SIGNED_IMAGES_DIR],
+        'videos': SIGNED_VIDEOS_DIRS
     }
-    return utils.find_original_asset(transformed_path, manifests_dirs)
+    return utils.find_original_asset(transformed_path, signed_dirs)
 
 
 def calculate_image_metrics(original_path: Path, transformed_path: Path, transform_type: Optional[str] = None) -> Tuple[Optional[str], Optional[float], Optional[str], Optional[float], str, int, Optional[str], float]:

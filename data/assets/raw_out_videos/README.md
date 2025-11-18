@@ -21,13 +21,13 @@ The script automatically:
 1. Scans for video files in this directory
 2. Checks existing C2PA signature status
 3. Signs unsigned videos with built-in test certificates
-4. Moves signed videos to `data/prepared_assets/manifests/videos/external/`
+4. Moves signed videos to `data/prepared_assets/signed_assets/videos/external/`
 5. Logs all operations to `data/results/logs/`
 
 ### 4. After Processing
 Signed videos are moved to:
 ```
-data/prepared_assets/manifests/videos/external/
+data/prepared_assets/signed_assets/videos/external/
 ├── video_1_signed.mp4
 ├── video_2_signed.mp4
 └── ...
@@ -65,6 +65,6 @@ They then automatically enter the transformation pipeline (Phase 2) alongside in
 - Check video file integrity
 
 **"Already signed"**
-- Informational message - video will be moved to manifests/ without re-signing
+- Informational message - video will be moved to signed_assets/ without re-signing
 
 For more details, see the main `README.md` in the project root.

@@ -62,10 +62,10 @@ data/assets/raw_out_videos/prompts.md
 
 # Prepared Assets - All signed/processed files (ignore everything)
 # These can be regenerated from raw assets
-data/prepared_assets/manifests/**/*.png
-data/prepared_assets/manifests/**/*.jpg
-data/prepared_assets/manifests/**/*.mp4
-data/prepared_assets/manifests/**/*.json
+data/prepared_assets/signed_assets/**/*.png
+data/prepared_assets/signed_assets/**/*.jpg
+data/prepared_assets/signed_assets/**/*.mp4
+data/prepared_assets/signed_assets/**/*.json
 
 # C2PA manifest extractions
 data/prepared_assets/c2pa_manifests/
@@ -101,9 +101,9 @@ data/results/logs/*.log
 !data/assets/raw_videos/.gitkeep
 !data/assets/raw_out_videos/.gitkeep
 !data/assets/raw_out_videos/README.md
-!data/prepared_assets/manifests/images/.gitkeep
-!data/prepared_assets/manifests/videos/internal/.gitkeep
-!data/prepared_assets/manifests/videos/external/.gitkeep
+!data/prepared_assets/signed_assets/images/.gitkeep
+!data/prepared_assets/signed_assets/videos/internal/.gitkeep
+!data/prepared_assets/signed_assets/videos/external/.gitkeep
 !data/prepared_assets/c2pa_manifests/.gitkeep
 !data/prepared_assets/transformed/.gitkeep
 !data/prepared_assets/platform_tests/**/.gitkeep
@@ -179,7 +179,7 @@ htmlcov/
 # =============================================================================
 
 # C2PA Keys and Certificates (NEVER commit private keys)
-data/prepared_assets/manifests/test_keys/
+data/prepared_assets/signed_assets/test_keys/
 data/certs/*.key
 data/certs/*.pem
 data/certs/*.crt

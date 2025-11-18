@@ -41,8 +41,8 @@ utils.log_environment_info()
 
 # Configuration - using shared constants
 INPUT_DIRS = [
-    utils.DIRS['manifests_videos_internal'],
-    utils.DIRS['manifests_videos_external']
+    utils.DIRS['signed_videos_internal'],
+    utils.DIRS['signed_videos_external']
 ]
 OUTPUT_BASE_DIR = utils.DIRS["compression_videos"]
 H264_BITRATES = ['5000k', '2000k', '500k']

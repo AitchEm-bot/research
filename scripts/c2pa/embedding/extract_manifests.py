@@ -2,14 +2,14 @@
 """
 Extract C2PA manifests from signed assets and save as JSON files.
 
-This script reads all signed images and videos in data/prepared_assets/manifests/, extracts their
+This script reads all signed images and videos in data/prepared_assets/signed_assets/, extracts their
 embedded C2PA manifests using c2patool, and saves them as separate JSON files for
 analysis and inspection.
 
 Directory Structure:
-  Input:  data/prepared_assets/manifests/images/*.png
-          data/prepared_assets/manifests/videos/internal/*.mp4
-          data/prepared_assets/manifests/videos/external/*.mp4
+  Input:  data/prepared_assets/signed_assets/images/*.png
+          data/prepared_assets/signed_assets/videos/internal/*.mp4
+          data/prepared_assets/signed_assets/videos/external/*.mp4
 
   Output: data/prepared_assets/c2pa_manifests/images/*.json
           data/prepared_assets/c2pa_manifests/videos/internal/*.json
@@ -37,7 +37,7 @@ utils.log_environment_info()
 C2PATOOL_PATH = Path("tools/c2patool/c2patool/c2patool.exe")
 
 # Base directories
-MANIFESTS_BASE = Path("data/prepared_assets/manifests")
+SIGNED_ASSETS_BASE = Path("data/prepared_assets/signed_assets")
 OUTPUT_BASE = Path("data/prepared_assets/c2pa_manifests")
 
 
@@ -101,12 +101,12 @@ def extract_manifest(asset_path: Path, output_path: Path) -> bool:
 
 def extract_all_manifests():
     """
-    Extract C2PA manifests from all signed assets in data/prepared_assets/manifests/.
+    Extract C2PA manifests from all signed assets in data/prepared_assets/signed_assets/.
 
     Scans:
-    - data/prepared_assets/manifests/images/*.png
-    - data/prepared_assets/manifests/videos/internal/*.mp4
-    - data/prepared_assets/manifests/videos/external/*.mp4
+    - data/prepared_assets/signed_assets/images/*.png
+    - data/prepared_assets/signed_assets/videos/internal/*.mp4
+    - data/prepared_assets/signed_assets/videos/external/*.mp4
 
     Outputs to:
     - data/prepared_assets/c2pa_manifests/images/*.json
@@ -119,17 +119,17 @@ def extract_all_manifests():
     # Define input/output directory pairs
     extraction_tasks = [
         {
-            'input_dir': MANIFESTS_BASE / "images",
+            'input_dir': SIGNED_ASSETS_BASE / "images",
             'output_dir': OUTPUT_BASE / "images",
             'category': 'Images'
         },
         {
-            'input_dir': MANIFESTS_BASE / "videos" / "internal",
+            'input_dir': SIGNED_ASSETS_BASE / "videos" / "internal",
             'output_dir': OUTPUT_BASE / "videos" / "internal",
             'category': 'Videos (Internal)'
         },
         {
-            'input_dir': MANIFESTS_BASE / "videos" / "external",
+            'input_dir': SIGNED_ASSETS_BASE / "videos" / "external",
             'output_dir': OUTPUT_BASE / "videos" / "external",
             'category': 'Videos (External)'
         }
@@ -201,7 +201,7 @@ def main():
         sys.exit(1)
 
     logger.info(f"Using c2patool at: {C2PATOOL_PATH}")
-    logger.info(f"Input directory: {MANIFESTS_BASE}")
+    logger.info(f"Input directory: {SIGNED_ASSETS_BASE}")
     logger.info(f"Output directory: {OUTPUT_BASE}")
 
     # Extract manifests

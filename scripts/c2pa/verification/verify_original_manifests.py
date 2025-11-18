@@ -7,14 +7,14 @@ transformations) to establish a baseline for comparison with post-transformation
 verification results.
 
 Purpose:
-- Verify manifests on original signed images and videos in data/prepared_assets/manifests/
+- Verify manifests on original signed images and videos in data/prepared_assets/signed_assets/
 - Generate baseline verification metrics (manifest_present, verified, signature_valid, etc.)
 - Compare with post-transformation results to measure C2PA robustness
 
 Input Assets:
-- data/prepared_assets/manifests/images/*_signed.png (100 images, SD1.4)
-- data/prepared_assets/manifests/videos/internal/*_signed.mp4 (50 videos, SVD)
-- data/prepared_assets/manifests/videos/external/*_signed.mp4 (60 videos, Veo3.1)
+- data/prepared_assets/signed_assets/images/*_signed.png (100 images, SD1.4)
+- data/prepared_assets/signed_assets/videos/internal/*_signed.mp4 (50 videos, SVD)
+- data/prepared_assets/signed_assets/videos/external/*_signed.mp4 (60 videos, Veo3.1)
 
 Output:
 - data/results/c2pa_validation_baseline.csv
@@ -50,7 +50,7 @@ logger = utils.setup_logging(log_file='data/results/logs/verify_original_manifes
 utils.log_environment_info()
 
 # Configuration
-MANIFESTS_BASE = Path("data/prepared_assets/manifests")
+SIGNED_ASSETS_BASE = Path("data/prepared_assets/signed_assets")
 OUTPUT_CSV = Path("data/results/c2pa_validation_baseline.csv")
 OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
 
@@ -342,7 +342,7 @@ def verify_asset(asset_path: Path, asset_type: str) -> Dict:
 
 def collect_signed_assets(test_mode: bool = False) -> list:
     """
-    Collect all signed assets from data/prepared_assets/manifests/.
+    Collect all signed assets from data/prepared_assets/signed_assets/.
 
     Args:
         test_mode: If True, return only 3 assets (1 image, 1 internal video, 1 external video)
@@ -353,7 +353,7 @@ def collect_signed_assets(test_mode: bool = False) -> list:
     assets = []
 
     # Images
-    images_dir = MANIFESTS_BASE / "images"
+    images_dir = SIGNED_ASSETS_BASE / "images"
     if images_dir.exists():
         for img_path in sorted(images_dir.glob("*_signed.png")):
             assets.append((img_path, 'image'))
@@ -361,13 +361,13 @@ def collect_signed_assets(test_mode: bool = False) -> list:
             assets.append((img_path, 'image'))
 
     # Videos - Internal
-    videos_internal_dir = MANIFESTS_BASE / "videos" / "internal"
+    videos_internal_dir = SIGNED_ASSETS_BASE / "videos" / "internal"
     if videos_internal_dir.exists():
         for vid_path in sorted(videos_internal_dir.glob("*_signed.mp4")):
             assets.append((vid_path, 'video'))
 
     # Videos - External
-    videos_external_dir = MANIFESTS_BASE / "videos" / "external"
+    videos_external_dir = SIGNED_ASSETS_BASE / "videos" / "external"
     if videos_external_dir.exists():
         for vid_path in sorted(videos_external_dir.glob("*_signed.mp4")):
             assets.append((vid_path, 'video'))
@@ -406,7 +406,7 @@ def process_assets(test_mode: bool = False):
     assets = collect_signed_assets(test_mode=test_mode)
 
     if not assets:
-        logger.error(f"No signed assets found in {MANIFESTS_BASE}")
+        logger.error(f"No signed assets found in {SIGNED_ASSETS_BASE}")
         return
 
     logger.info(f"Found {len(assets)} signed assets to verify")

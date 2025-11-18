@@ -30,7 +30,7 @@ research/
 │   │   ├── raw_images_for_videos/   # Conditioning images for SVD
 │   │   └── raw_out_videos/          # 60 external videos (Veo3.1)
 │   ├── prepared_assets/             # Processed assets ready for testing
-│   │   ├── manifests/               # C2PA signed assets (210 total)
+│   │   ├── signed_assets/           # C2PA signed assets (210 total)
 │   │   │   ├── images/              # 100 signed images
 │   │   │   └── videos/
 │   │   │       ├── internal/        # 50 signed internal videos (SVD)
@@ -108,7 +108,7 @@ research/
 - Enables cross-platform AI comparison
 
 **Deliverables:**
-- ✅ 100 signed images in `data/prepared_assets/manifests/images/`
+- ✅ 100 signed images in `data/prepared_assets/signed_assets/images/`
 - ✅ 110 signed videos (50 internal + 60 external)
 - ✅ Metadata preserved: seed, model version, generation prompts
 
@@ -394,8 +394,8 @@ Research accounts created for platform testing:
 
 - **Instagram**: [@independant_researcher](https://www.instagram.com/independant_researcher/)
 - **Twitter**: [@Independant_R](https://x.com/Independant_R)
-- **Facebook**: [Profile 61583369476134](https://www.facebook.com/profile.php?id=61583369476134)
-- **YouTube**: [UCOwAw40mtHxcMLZG7HyL7fw](https://www.youtube.com/channel/UCOwAw40mtHxcMLZG7HyL7fw)
+- **Facebook**: [Hani Moustafa](https://www.facebook.com/profile.php?id=61583369476134)
+- **YouTube**: [@IndependantResearcher](http://www.youtube.com/@IndependantResearcher)
 - **TikTok**: [@independant_researcher](https://www.tiktok.com/@independant_researcher)
 
 All accounts contain AI-generated content only (no personal data or real individuals).

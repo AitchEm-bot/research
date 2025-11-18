@@ -43,10 +43,10 @@ logger = utils.setup_logging(log_file='data/prepared_assets/transformed/transfor
 utils.log_environment_info()
 
 # Configuration - using shared constants
-IMAGES_INPUT_DIR = utils.DIRS['manifests_images']
+IMAGES_INPUT_DIR = utils.DIRS['signed_images']
 VIDEOS_INPUT_DIRS = [
-    utils.DIRS['manifests_videos_internal'],
-    utils.DIRS['manifests_videos_external']
+    utils.DIRS['signed_videos_internal'],
+    utils.DIRS['signed_videos_external']
 ]
 OUTPUT_BASE_DIR = utils.DATA_DIR / "prepared_assets/transformed/editing"
 

@@ -477,14 +477,14 @@ def auto_sample_uploads() -> bool:
     print("  - 100 images total (25 per image-supporting platform)")
     print("  - 60 videos total (10 per platform)")
     print("\nSources:")
-    print("  - Images: data/prepared_assets/manifests/images/*_signed.png (original signed)")
-    print("  - Videos: data/prepared_assets/manifests/videos/external/*_signed.mp4 (all external)")
+    print("  - Images: data/prepared_assets/signed_assets/images/*_signed.png (original signed)")
+    print("  - Videos: data/prepared_assets/signed_assets/videos/external/*_signed.mp4 (all external)")
     print("\n" + "="*60)
     print("\nProceeding with auto-sampling...")
 
     # Find original signed assets (not transformed)
-    images_dir = Path("data/prepared_assets/manifests/images")
-    videos_dir = Path("data/prepared_assets/manifests/videos/external")
+    images_dir = Path("data/prepared_assets/signed_assets/images")
+    videos_dir = Path("data/prepared_assets/signed_assets/videos/external")
 
     if not images_dir.exists():
         print(f"\nERROR: Images directory not found: {images_dir}")
