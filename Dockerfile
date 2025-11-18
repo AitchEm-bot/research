@@ -124,7 +124,9 @@ ENV PYTHONUNBUFFERED=1
 # Entrypoint script
 # --------------------------
 COPY scripts/docker_entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Convert Windows line endings (CRLF) to Unix (LF)
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
 
 # Default entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

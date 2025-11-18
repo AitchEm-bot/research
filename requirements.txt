@@ -41,6 +41,8 @@ seaborn==0.13.2
 
 # CLI & Utilities
 typer==0.15.1
+click<8.2.0  # Pin to prevent breaking change in Click 8.2.0+ (typer compatibility)
+rich==13.9.4
 
 # Additional utilities
 python-dotenv==1.0.1
