@@ -57,7 +57,7 @@ else
     export CUDA_VISIBLE_DEVICES=-1
 fi
 
-# Check c2patool installation
+# Check c2patool installation (optional - can be installed on host)
 if command -v c2patool &> /dev/null; then
     C2PA_VERSION=$(c2patool --version 2>&1 | head -1)
     print_status "c2patool installed: $C2PA_VERSION"
@@ -66,9 +66,9 @@ elif [ -f "/usr/local/bin/c2patool" ]; then
     print_status "c2patool installed: $C2PA_VERSION"
     export PATH="/usr/local/bin:$PATH"
 else
-    print_error "c2patool not found!"
-    print_error "Please ensure c2patool is installed in the container"
-    exit 1
+    print_warning "c2patool not found in container"
+    print_warning "C2PA operations will require c2patool on host system"
+    print_warning "Install from: https://github.com/contentauth/c2pa-rs/releases"
 fi
 
 # Check FFmpeg installation

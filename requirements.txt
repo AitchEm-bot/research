@@ -18,8 +18,8 @@ accelerate==1.2.1
 # xformers==0.0.28.post2; platform_system != "Darwin"
 
 # C2PA Content Credentials
-# Note: c2pa-python may not have Windows wheels; using fallback shim
-c2pa-python==0.4.2
+# Note: Updated to latest stable version (0.4.2 not available on PyPI)
+c2pa-python==0.27.1
 
 # Image/Video Processing
 opencv-python==4.10.0.84
