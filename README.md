@@ -337,6 +337,45 @@ python scripts/processing/preprocessing/platform/process_platform_returns.py
 python scripts/processing/metrics/merge_results.py
 ```
 
+## 🐳 Docker Support (Phase 5)
+
+Run the entire pipeline in a reproducible containerized environment:
+
+### Quick Docker Setup
+
+```bash
+# 1. Build the Docker image
+docker build -t c2pa-research .
+
+# 2. Run complete pipeline
+docker-compose up
+
+# 3. Run specific phase
+docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase3
+
+# 4. Run in test mode (faster)
+docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research run-all --test
+```
+
+### Docker Features
+
+- **CUDA 12.1 Support**: Full GPU acceleration with optimized memory settings
+- **Master Orchestrator**: New `run_pipeline.py` script for coordinated execution
+- **Volume Persistence**: Data and model caches persist across container runs
+- **Environment Variables**: Configurable via `.env` file
+- **Checkpoint System**: Resume pipeline from any phase
+
+### Docker Files Created
+
+- `Dockerfile`: CUDA-enabled container with all dependencies
+- `docker-compose.yml`: GPU configuration and volume management
+- `scripts/run_pipeline.py`: Master pipeline orchestrator
+- `.dockerignore`: Optimized build context
+- `.env.example`: Environment variable template
+- `README_DOCKER.md`: Complete Docker documentation
+
+See [README_DOCKER.md](README_DOCKER.md) for detailed Docker instructions.
+
 ## Testing & Debugging
 
 All scripts support `--test` flag for smoke testing:

@@ -23,6 +23,7 @@ Security Features:
 import csv
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -33,12 +34,15 @@ from typing import Dict, List, Optional, Tuple, Union
 
 # ==================== CONFIGURATION ====================
 
+# Support for environment variables (Docker compatibility)
+# Falls back to local paths if environment variables not set
+
 # Project root directory (scripts/common/../.. = project root)
-PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
+PROJECT_ROOT = Path(os.getenv('PROJECT_ROOT', Path(__file__).parent.parent.parent.resolve()))
 
 # Standard directory structure
-DATA_DIR = PROJECT_ROOT / "data"
-SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+DATA_DIR = Path(os.getenv('DATA_DIR', PROJECT_ROOT / "data"))
+SCRIPTS_DIR = Path(os.getenv('SCRIPTS_DIR', PROJECT_ROOT / "scripts"))
 
 # Data subdirectories (NEW reorganized structure)
 DIRS = {
@@ -72,8 +76,14 @@ DIRS = {
 }
 
 # C2PA tool configuration
-C2PATOOL_LOCAL = PROJECT_ROOT / "tools/c2patool/c2patool/c2patool.exe"
-C2PATOOL_CMD = str(C2PATOOL_LOCAL) if C2PATOOL_LOCAL.exists() else "c2patool"
+# Support environment variable for c2patool path (Docker compatibility)
+if os.getenv('C2PATOOL_PATH'):
+    C2PATOOL_CMD = os.getenv('C2PATOOL_PATH')
+    C2PATOOL_LOCAL = Path(C2PATOOL_CMD)
+else:
+    # Fallback to local Windows path
+    C2PATOOL_LOCAL = PROJECT_ROOT / "tools/c2patool/c2patool/c2patool.exe"
+    C2PATOOL_CMD = str(C2PATOOL_LOCAL) if C2PATOOL_LOCAL.exists() else "c2patool"
 
 # Lossless transform types (from CLAUDE.md)
 LOSSLESS_TRANSFORMS = {'png_c0', 'png_c9'}

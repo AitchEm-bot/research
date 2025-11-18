@@ -1,0 +1,99 @@
+# .dockerignore - Exclude files from Docker build context
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Large generated data (will be mounted as volumes)
+data/prepared_assets/signed_assets/
+data/prepared_assets/transformed/
+data/prepared_assets/platform_tests/*/uploads/
+data/prepared_assets/platform_tests/*/returned/
+data/results/csv/*.csv
+data/results/analysis_results/
+data/results/logs/*.log
+
+# Model caches (will use Docker volumes)
+.cache/
+huggingface/
+.huggingface/
+models/
+checkpoints/
+
+# Documentation (not needed in runtime)
+docs/
+*.md
+!README.md
+!CLAUDE.md
+!FLOW_DIAGRAM.md
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+temp/
+tmp/
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Sessions and logs
+sessions/
+nul
+
+# Jupyter notebooks (if any)
+.ipynb_checkpoints
+*.ipynb
+
+# Claude Code
+.claude/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Optional: Keep test data only
+!data/assets/raw_images/.gitkeep
+!data/assets/raw_videos/.gitkeep
+!data/assets/raw_images_for_videos/.gitkeep
+!data/assets/raw_out_videos/.gitkeep
+!data/prepared_assets/signed_assets/.gitkeep
+!data/prepared_assets/transformed/.gitkeep
+!data/prepared_assets/platform_tests/*/.gitkeep
+!data/results/.gitkeep
+!data/results/csv/.gitkeep
+!data/results/logs/.gitkeep

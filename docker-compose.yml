@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  c2pa-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: c2pa-research:latest
+    container_name: c2pa-research-pipeline
+
+    # Volume mappings
+    volumes:
+      # Data directory (read-write for inputs and outputs)
+      - ./data:/workspace/data:rw
+
+      # Scripts directory (read-only, use image's copy)
+      # Commented out to use the copied scripts in the image
+      # - ./scripts:/workspace/scripts:ro
+
+      # Model caches (persistent across runs)
+      - huggingface-cache:/workspace/.cache/huggingface
+      - torch-cache:/workspace/.cache/torch
+
+      # Tools directory (for c2patool if needed)
+      - ./tools:/workspace/tools:ro
+
+    # GPU configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # Environment variables
+    environment:
+      # GPU selection
+      - CUDA_VISIBLE_DEVICES=0
+
+      # Memory optimization for RTX 4060 (8GB VRAM)
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+
+      # Model cache paths
+      - HF_HOME=/workspace/.cache/huggingface
+      - TORCH_HOME=/workspace/.cache/torch
+      - TRANSFORMERS_CACHE=/workspace/.cache/huggingface
+
+      # Tool paths
+      - C2PATOOL_PATH=/usr/local/bin/c2patool
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+
+      # Data paths
+      - PROJECT_ROOT=/workspace
+      - DATA_DIR=/workspace/data
+
+      # Python settings
+      - PYTHONUNBUFFERED=1
+
+    # Resource limits (optional, adjust based on your system)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 16G
+    #     reservations:
+    #       memory: 8G
+
+    # Network mode for better performance
+    network_mode: host
+
+    # Automatically remove container after exit
+    # remove: true
+
+    # Default command (can be overridden)
+    command: ["run-all", "--test"]
+
+    # Interactive terminal
+    stdin_open: true
+    tty: true
+
+# Named volumes for persistent caches
+volumes:
+  huggingface-cache:
+    driver: local
+  torch-cache:
+    driver: local
+
+# Networks (optional, using host mode above)
+# networks:
+#   c2pa-net:
+#     driver: bridge
