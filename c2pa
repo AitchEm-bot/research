@@ -1,0 +1,254 @@
+#!/bin/bash
+# C2PA Robustness Research Pipeline - Docker Wrapper
+# Phase-based execution wrapper for easy Docker usage
+
+set -e
+
+# Configuration
+IMAGE="${C2PA_IMAGE:-c2pa-research:latest}"
+OUTPUT_DIR="${C2PA_DATA_DIR:-./c2pa-results}"
+GPU_FLAG="${C2PA_GPU:---gpus all}"
+
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
+
+# Create model cache volumes if they don't exist
+docker volume create huggingface-cache >/dev/null 2>&1 || true
+docker volume create torch-cache >/dev/null 2>&1 || true
+
+# Helper function to run Docker
+run_docker() {
+    local use_gpu="$1"
+    shift
+
+    if [ "$use_gpu" = "true" ]; then
+        docker run --rm $GPU_FLAG \
+            -v "$OUTPUT_DIR:/workspace/data" \
+            -v huggingface-cache:/workspace/.cache/huggingface \
+            -v torch-cache:/workspace/.cache/torch \
+            "$IMAGE" "$@"
+    else
+        docker run --rm \
+            -v "$OUTPUT_DIR:/workspace/data" \
+            -v huggingface-cache:/workspace/.cache/huggingface \
+            -v torch-cache:/workspace/.cache/torch \
+            "$IMAGE" "$@"
+    fi
+}
+
+# Helper function to create platform directories
+create_platform_dirs() {
+    local platforms=("instagram" "twitter" "facebook" "youtube" "tiktok" "whatsapp")
+
+    for platform in "${platforms[@]}"; do
+        mkdir -p "$OUTPUT_DIR/platform_tests/$platform/uploads"
+        mkdir -p "$OUTPUT_DIR/platform_tests/$platform/returned"
+    done
+}
+
+# Helper function to generate platform instructions
+generate_platform_instructions() {
+    cat > "$OUTPUT_DIR/PLATFORM_UPLOAD_INSTRUCTIONS.txt" << 'EOF'
+========================================
+PLATFORM TESTING INSTRUCTIONS
+========================================
+
+Assets have been distributed to platform folders.
+
+WORKFLOW:
+1. Navigate to: c2pa-results/platform_tests/
+2. For each platform folder:
+   a. Find assets in the 'uploads/' subfolder
+   b. Upload these assets to the respective platform
+   c. Download them back from the platform
+   d. Place downloads in the 'returned/' subfolder
+
+3. After completing uploads/downloads for all platforms:
+   Run: c2pa phase 3
+
+PLATFORMS TO TEST:
+- instagram/    (images + videos)
+- twitter/      (images + videos)
+- facebook/     (images + videos)
+- youtube/      (videos only)
+- tiktok/       (videos only)
+- whatsapp/     (images + videos)
+
+NOTES:
+- Maintain original filenames when possible
+- If platform renames files, use descriptive names
+- Document any upload/download issues in platform_notes.txt
+
+For detailed instructions, see README_DOCKER.md section on Platform Testing.
+EOF
+
+    echo ""
+    echo "+================================================================+"
+    echo "|              PLATFORM TESTING SETUP COMPLETE                  |"
+    echo "+================================================================+"
+    echo ""
+    cat "$OUTPUT_DIR/PLATFORM_UPLOAD_INSTRUCTIONS.txt"
+    echo ""
+    echo "Instructions saved to: $OUTPUT_DIR/PLATFORM_UPLOAD_INSTRUCTIONS.txt"
+    echo ""
+}
+
+# Main command router
+case "$1" in
+    "phase")
+        PHASE="$2"
+        shift 2
+
+        case "$PHASE" in
+            "0")
+                echo "[Phase 0: Asset Generation]"
+                run_docker true phase0 "$@"
+                ;;
+
+            "1")
+                echo "[Phase 1: C2PA Manifest Embedding]"
+                run_docker false phase1 "$@"
+                ;;
+
+            "2")
+                echo "[Phase 2: Transformation Pipeline]"
+                run_docker false phase2 "$@"
+                ;;
+
+            "2.5")
+                echo "[Phase 2.5: Platform Testing Setup]"
+                echo "Creating platform test directories..."
+                create_platform_dirs
+
+                # Run platform upload preparation
+                run_docker false phase2_5 "$@"
+
+                # Generate instructions
+                generate_platform_instructions
+                ;;
+
+            "3")
+                echo "[Phase 3: Verification & Quality Metrics]"
+                run_docker true phase3 "$@"
+                ;;
+
+            "4")
+                echo "[Phase 4: Analysis & Visualization]"
+                run_docker false phase4 "$@"
+                ;;
+
+            *)
+                echo "Error: Invalid phase number: $PHASE"
+                echo ""
+                echo "Valid phases:"
+                echo "  0    - Asset generation (separate step, run independently)"
+                echo "  1    - C2PA manifest embedding"
+                echo "  2    - Transformation pipeline"
+                echo "  2.5  - Platform testing setup (optional)"
+                echo "  3    - Verification & quality metrics"
+                echo "  4    - Analysis & visualization"
+                echo ""
+                echo "Usage: c2pa phase <number> [options]"
+                echo "Example: c2pa phase 0 --images 50 --videos 10"
+                exit 1
+                ;;
+        esac
+        ;;
+
+    "run")
+        echo "[Full Pipeline: Phases 1-4, starts from embedding]"
+        echo "Note: Phase 0 (generation) is separate. Preset assets will be used."
+        shift
+        run_docker true run-all "$@"
+        ;;
+
+    "test")
+        echo "[Quick Test Mode: Phases 1-4 with preset assets]"
+        run_docker true run-all --test
+        ;;
+
+    "status")
+        echo "[Pipeline Status Check]"
+        run_docker false status
+        ;;
+
+    "shell")
+        echo "[Interactive Shell]"
+        docker run --rm -it $GPU_FLAG \
+            -v "$OUTPUT_DIR:/workspace/data" \
+            -v huggingface-cache:/workspace/.cache/huggingface \
+            -v torch-cache:/workspace/.cache/torch \
+            "$IMAGE" bash
+        ;;
+
+    "--help"|"-h"|"help")
+        cat << 'HELP'
+C2PA Robustness Research Pipeline - Docker Wrapper
+===================================================
+
+USAGE:
+  c2pa <command> [options]
+
+PHASE-BY-PHASE EXECUTION:
+  c2pa phase 0 [options]           Generate AI assets
+    --images N                     Number of images to generate
+    --videos N                     Number of videos to generate
+    --test                         Generate test counts (10 images, 2 videos)
+
+  c2pa phase 1 [options]           Embed C2PA manifests
+  c2pa phase 2 [options]           Apply transformations
+  c2pa phase 2.5 [options]         Setup platform testing (optional)
+  c2pa phase 3 [options]           Verify C2PA & calculate metrics
+  c2pa phase 4 [options]           Generate analysis & visualizations
+
+FULL PIPELINE:
+  c2pa run [options]               Run complete pipeline (skips 2.5)
+  c2pa test                        Quick test with minimal assets
+
+UTILITIES:
+  c2pa status                      Check pipeline status
+  c2pa shell                       Open interactive shell in container
+  c2pa --help                      Show this help message
+
+EXAMPLES:
+  c2pa phase 0 --images 50 --videos 10    # Generate 50 images + 10 videos
+  c2pa phase 0 --test                     # Generate test set
+  c2pa run                                # Full pipeline with presets
+  c2pa phase 2 --test                     # Test transformations only
+
+ENVIRONMENT VARIABLES:
+  C2PA_IMAGE                       Docker image name (default: c2pa-research:latest)
+  C2PA_DATA_DIR                    Output directory (default: ./c2pa-results)
+  C2PA_GPU                         GPU flags (default: --gpus all)
+
+OUTPUT:
+  All results saved to: ./c2pa-results/
+  - csv/final_metrics.csv          Main results
+  - plots/                         Visualizations
+  - logs/                          Execution logs
+
+For detailed documentation, see README_DOCKER.md
+HELP
+        ;;
+
+    *)
+        if [ -z "$1" ]; then
+            echo "Error: No command specified"
+            echo "Run 'c2pa --help' for usage information"
+            exit 1
+        fi
+
+        # Forward unknown commands directly to Docker
+        run_docker true "$@"
+        ;;
+esac
+
+# Show results summary if CSV exists
+if [ -f "$OUTPUT_DIR/csv/final_metrics.csv" ]; then
+    echo ""
+    echo "+================================================================+"
+    echo "| Results available in: $OUTPUT_DIR"
+    echo "| Metrics CSV: $OUTPUT_DIR/csv/final_metrics.csv"
+    echo "| Plots: $OUTPUT_DIR/plots/"
+    echo "+================================================================+"
+fi

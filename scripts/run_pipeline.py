@@ -7,17 +7,19 @@ This script coordinates all phases of the research pipeline while respecting
 the existing modular structure of 33+ specialized scripts.
 
 Phases:
-  1.0: Generate AI assets (images and videos)
-  1.5: Embed C2PA manifests
-  2.0: Apply transformations (compression and editing)
-  3.0: Verify C2PA and calculate quality metrics
-  4.0: Data analysis and visualization
+  0: Generate AI assets (images and videos) - Separate step, run independently
+  1: Embed C2PA manifests (auto-copies presets if no assets exist)
+  2: Apply transformations (compression and editing)
+  2.5: Platform testing setup (optional)
+  3: Verify C2PA and calculate quality metrics
+  4: Data analysis and visualization
 
 Usage:
-  python scripts/run_pipeline.py run-all          # Run complete pipeline
+  python scripts/run_pipeline.py run-all          # Run phases 1-4 (starts from embedding)
   python scripts/run_pipeline.py run-all --test   # Run in test mode
-  python scripts/run_pipeline.py phase1           # Run only Phase 1
-  python scripts/run_pipeline.py phase2 --test    # Run Phase 2 in test mode
+  python scripts/run_pipeline.py phase0 --images 50  # Generate 50 new images
+  python scripts/run_pipeline.py phase1           # C2PA embedding (phase 1)
+  python scripts/run_pipeline.py phase2 --test    # Transformations in test mode
   python scripts/run_pipeline.py --help           # Show help
 """
 
@@ -104,6 +106,48 @@ def check_checkpoint(phase: str) -> bool:
            checkpoints["phases"][phase].get("status") == "completed"
 
 
+def copy_preset_assets():
+    """
+    Copy preset assets from Docker image to working data directory.
+    This allows users to run the pipeline immediately without generation.
+    """
+    import shutil
+
+    preset_dir = Path("/workspace/preset_assets")
+    target_dir = PROJECT_ROOT / "data" / "assets"
+
+    if not preset_dir.exists():
+        console.print("[yellow]No preset assets found. Will need to generate assets.[/yellow]")
+        return False
+
+    console.print("[cyan]Copying preset assets to working directory...[/cyan]")
+
+    # Copy raw images
+    if (preset_dir / "raw_images").exists():
+        for img_file in (preset_dir / "raw_images").glob("*"):
+            shutil.copy2(img_file, target_dir / "raw_images" / img_file.name)
+        img_count = len(list((target_dir / "raw_images").glob("*.png")))
+        console.print(f"  [OK] Copied {img_count} images")
+
+    # Copy conditioning images for videos
+    if (preset_dir / "raw_images_for_videos").exists():
+        for img_file in (preset_dir / "raw_images_for_videos").glob("*"):
+            shutil.copy2(img_file, target_dir / "raw_images_for_videos" / img_file.name)
+        vid_img_count = len(list((target_dir / "raw_images_for_videos").glob("*.png")))
+        console.print(f"  [OK] Copied {vid_img_count} conditioning images")
+
+    # Copy external videos
+    if (preset_dir / "raw_out_videos").exists():
+        for vid_file in (preset_dir / "raw_out_videos").glob("*.mp4"):
+            shutil.copy2(vid_file, target_dir / "raw_out_videos" / vid_file.name)
+        vid_count = len(list((target_dir / "raw_out_videos").glob("*.mp4")))
+        console.print(f"  [OK] Copied {vid_count} external videos")
+
+    console.print("[green][OK] Preset assets loaded successfully[/green]")
+    logger.info("Preset assets copied from /workspace/preset_assets")
+    return True
+
+
 def run_script(script_path: str, args: List[str] = None, test_mode: bool = False,
                timeout: Optional[int] = None) -> subprocess.CompletedProcess:
     """
@@ -157,17 +201,39 @@ def run_script(script_path: str, args: List[str] = None, test_mode: bool = False
 
 
 @app.command()
-def phase1(
+def phase0(
     test: bool = typer.Option(False, "--test", help="Run in test mode (fewer assets)"),
-    force: bool = typer.Option(False, "--force", help="Force re-run even if checkpoint exists")
+    force: bool = typer.Option(False, "--force", help="Force re-run even if checkpoint exists"),
+    images: Optional[int] = typer.Option(None, "--images", help="Number of images to generate"),
+    videos: Optional[int] = typer.Option(None, "--videos", help="Number of videos to generate"),
+    skip_images: bool = typer.Option(False, "--skip-images", help="Skip image generation"),
+    skip_videos: bool = typer.Option(False, "--skip-videos", help="Skip video generation"),
 ):
-    """Phase 1: Generate AI assets (images and videos)"""
+    """Phase 0: Asset generation (NEW images/videos only, no preset copying)"""
 
-    if check_checkpoint("phase1") and not force:
-        console.print("[yellow]Phase 1 already completed. Use --force to re-run.[/yellow]")
+    if check_checkpoint("phase0") and not force:
+        console.print("[yellow]Phase 0 already completed. Use --force to re-run.[/yellow]")
         return
 
-    console.print(Panel.fit("PHASE 1: Asset Generation", style="bold blue"))
+    console.print("+================================================================+")
+    console.print("|                PHASE 0: Asset Generation                      |")
+    console.print("+================================================================+")
+    console.print("")
+
+    # Determine counts
+    if skip_images:
+        image_count = 0
+    elif images is not None:
+        image_count = images
+    else:
+        image_count = 10 if test else 100
+
+    if skip_videos:
+        video_count = 0
+    elif videos is not None:
+        video_count = videos
+    else:
+        video_count = 2 if test else 30
 
     with Progress(
         SpinnerColumn(),
@@ -175,47 +241,70 @@ def phase1(
         console=console,
     ) as progress:
 
-        # Generate images
-        task = progress.add_task("Generating images...", total=None)
-        run_script(
-            "scripts/processing/generation/generate_images.py",
-            ["--seed", "42", "--count", "10" if test else "100"],
-            test_mode=False  # Don't use test flag, we control count directly
-        )
-        progress.update(task, completed=True)
+        if image_count > 0:
+            # Generate images
+            task = progress.add_task(f"Generating {image_count} images...", total=None)
+            run_script(
+                "scripts/processing/generation/generate_images.py",
+                ["--seed", "42", "--count", str(image_count)],
+                test_mode=False
+            )
+            progress.update(task, completed=True)
+            console.print(f"  [OK] Generated {image_count} images")
 
-        # Generate conditioning images for videos
-        task = progress.add_task("Generating conditioning images...", total=None)
-        run_script(
-            "scripts/processing/generation/generate_video_images.py",
-            test_mode=test
-        )
-        progress.update(task, completed=True)
+        if video_count > 0:
+            # Generate conditioning images for videos
+            task = progress.add_task("Generating conditioning images...", total=None)
+            run_script(
+                "scripts/processing/generation/generate_video_images.py",
+                ["--count", str(video_count)],
+                test_mode=False
+            )
+            progress.update(task, completed=True)
 
-        # Generate videos
-        task = progress.add_task("Generating videos...", total=None)
-        run_script(
-            "scripts/processing/generation/generate_videos.py",
-            test_mode=test
-        )
-        progress.update(task, completed=True)
+            # Generate videos
+            task = progress.add_task(f"Generating {video_count} videos...", total=None)
+            run_script(
+                "scripts/processing/generation/generate_videos.py",
+                ["--count", str(video_count)],
+                test_mode=False
+            )
+            progress.update(task, completed=True)
+            console.print(f"  [OK] Generated {video_count} videos")
 
-    save_checkpoint("phase1", metadata={"test_mode": test})
-    console.print("[green]Phase 1 completed successfully![/green]")
+    save_checkpoint("phase0", metadata={"test_mode": test, "image_count": image_count, "video_count": video_count})
+    console.print("Status: Asset generation complete")
+    console.print("[OK] Phase 0 completed successfully!")
 
 
 @app.command()
-def phase1_5(
+def phase1(
     test: bool = typer.Option(False, "--test", help="Run in test mode"),
     force: bool = typer.Option(False, "--force", help="Force re-run even if checkpoint exists")
 ):
-    """Phase 1.5: Embed C2PA manifests in assets"""
+    """Phase 1: Embed C2PA manifests in assets (auto-copies presets if no assets exist)"""
 
-    if check_checkpoint("phase1.5") and not force:
-        console.print("[yellow]Phase 1.5 already completed. Use --force to re-run.[/yellow]")
+    if check_checkpoint("phase1") and not force:
+        console.print("[yellow]Phase 1 already completed. Use --force to re-run.[/yellow]")
         return
 
-    console.print(Panel.fit("PHASE 1.5: C2PA Embedding", style="bold blue"))
+    # Check if assets exist, if not copy presets
+    assets_dir = PROJECT_ROOT / "data" / "assets"
+    raw_images = list((assets_dir / "raw_images").glob("*.png"))
+    raw_videos = list((assets_dir / "raw_out_videos").glob("*.mp4"))
+
+    if not raw_images and not raw_videos:
+        console.print("[yellow]No assets found. Copying preset assets...[/yellow]")
+        if copy_preset_assets():
+            console.print("[green]Preset assets copied successfully![/green]")
+        else:
+            console.print("[red]No preset assets available. Run 'phase0' to generate assets first.[/red]")
+            return
+
+    console.print("+================================================================+")
+    console.print("|               PHASE 1: C2PA Embedding                         |")
+    console.print("+================================================================+")
+    console.print("")
 
     with Progress(
         SpinnerColumn(),
@@ -241,8 +330,8 @@ def phase1_5(
         run_script("scripts/c2pa/embedding/extract_manifests.py", test_mode=test)
         progress.update(task, completed=True)
 
-    save_checkpoint("phase1.5", metadata={"test_mode": test})
-    console.print("[green]Phase 1.5 completed successfully![/green]")
+    save_checkpoint("phase1", metadata={"test_mode": test})
+    console.print("[green]Phase 1 completed successfully![/green]")
 
 
 @app.command()
@@ -393,28 +482,27 @@ def phase4(
 @app.command()
 def run_all(
     test: bool = typer.Option(False, "--test", help="Run in test mode (fewer assets, faster)"),
-    skip_gen: bool = typer.Option(False, "--skip-gen", help="Skip generation if assets exist"),
-    resume_from: float = typer.Option(1.0, "--resume-from", help="Resume from phase number (1, 1.5, 2, 3, 4)"),
+    resume_from: int = typer.Option(1, "--resume-from", help="Resume from phase number (1, 2, 3, 4)"),
     force: bool = typer.Option(False, "--force", help="Force re-run all phases"),
     publication: bool = typer.Option(False, "--publication", help="Generate publication figures in Phase 4")
 ):
-    """Run complete pipeline (Phases 1-4)"""
+    """Run complete pipeline starting from Phase 1 (C2PA Embedding) through Phase 4 (Analysis)"""
 
     start_time = time.time()
 
     console.print(Panel.fit(
         "[bold]C2PA Robustness Research Pipeline[/bold]\n" +
         f"Mode: {'TEST' if test else 'FULL'}\n" +
-        f"Resume from: Phase {resume_from}",
+        f"Resume from: Phase {resume_from}\n" +
+        "[dim]Note: Phase 0 (generation) is separate. Use 'phase0' command if you need to generate new assets.[/dim]",
         style="bold magenta"
     ))
 
     phases = [
-        (1.0, "Generation", phase1),
-        (1.5, "C2PA Embedding", phase1_5),
-        (2.0, "Transformations", phase2),
-        (3.0, "Verification & Metrics", phase3),
-        (4.0, "Analysis", phase4)
+        (1, "C2PA Embedding", phase1),
+        (2, "Transformations", phase2),
+        (3, "Verification & Metrics", phase3),
+        (4, "Analysis", phase4)
     ]
 
     # Create summary table
@@ -425,8 +513,6 @@ def run_all(
 
     for phase_num, description, _ in phases:
         if phase_num < resume_from:
-            status = "⏭️ Skip"
-        elif skip_gen and phase_num == 1.0:
             status = "⏭️ Skip"
         else:
             status = "▶️ Run"
@@ -439,10 +525,6 @@ def run_all(
     for phase_num, description, phase_func in phases:
         if phase_num < resume_from:
             console.print(f"[dim]Skipping Phase {phase_num} (already completed)[/dim]")
-            continue
-
-        if skip_gen and phase_num == 1.0:
-            console.print("[dim]Skipping Phase 1 (generation)[/dim]")
             continue
 
         console.print(f"\n[bold]Starting Phase {phase_num}: {description}[/bold]")
@@ -473,6 +555,39 @@ def run_all(
 
 
 @app.command()
+def phase2_5(
+    auto_sample: bool = typer.Option(True, "--auto-sample", help="Automatically sample assets for platforms"),
+):
+    """Phase 2.5: Prepare assets for platform testing (distributes signed assets to platform directories)"""
+    console.print("+================================================================+")
+    console.print("|          PHASE 2.5: Platform Testing Setup                     |")
+    console.print("+================================================================+")
+    console.print("")
+
+    # Run the platform preparation script
+    console.print("[>>] Distributing assets to platform directories...")
+
+    try:
+        run_script(
+            "scripts/processing/preprocessing/platform/prepare_platform_uploads.py",
+            ["--auto-sample"] if auto_sample else [],
+            test_mode=False
+        )
+        console.print("[OK] Platform directories created and assets distributed")
+        console.print("")
+        console.print("Next steps:")
+        console.print("  1. Navigate to: data/platform_tests/")
+        console.print("  2. Upload assets from each platform's 'uploads/' folder")
+        console.print("  3. Download them back and place in 'returned/' folder")
+        console.print("  4. Run: c2pa phase 3")
+        console.print("")
+        console.print("Status: Ready for manual platform testing")
+    except Exception as e:
+        console.print(f"[X] Failed to prepare platform uploads: {e}")
+        logger.error(f"Platform upload preparation failed: {e}")
+
+
+@app.command()
 def status():
     """Check pipeline execution status"""
 
@@ -490,7 +605,7 @@ def status():
     table.add_column("Status", style="magenta")
     table.add_column("Timestamp", style="green")
 
-    phases = ["phase1", "phase1.5", "phase2", "phase3", "phase4"]
+    phases = ["phase0", "phase1", "phase2", "phase3", "phase4"]
 
     for phase in phases:
         if phase in checkpoints.get("phases", {}):

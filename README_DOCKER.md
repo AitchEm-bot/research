@@ -78,7 +78,8 @@ With `-v` volume mounting:
 
 - [Prerequisites](#-prerequisites)
 - [Deployment Options](#-deployment-options)
-  - [Option 1: Pull Public Image (Fastest)](#option-1-pull-public-image-fastest)
+  - [Option 0: Quick Install (Recommended)](#option-0-quick-install-recommended-for-most-users)
+  - [Option 1: Pull Public Image (Manual)](#option-1-pull-public-image-manual-docker-commands)
   - [Option 2: Build from Source](#option-2-build-from-source)
 - [Understanding File Storage](#-understanding-file-storage-critical)
 - [Running Your First Test](#-running-your-first-test)
@@ -176,13 +177,88 @@ docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
 
 ## 🚀 Deployment Options
 
-### Option 1: Pull Public Image (Fastest)
+### Option 0: Quick Install (Recommended for Most Users)
+
+**Best for:** Fastest setup, easiest to use, recommended for peer reviewers and researchers
+
+The quick-install script automatically pulls the Docker image and installs the `c2pa` command-line wrapper:
+
+**Linux/macOS:**
+```bash
+curl -sSL https://raw.githubusercontent.com/AitchEm-bot/research/master/quick-install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/AitchEm-bot/research/master/quick-install.ps1 | iex
+```
+
+**What this does:**
+1. ✅ Checks Docker installation
+2. ✅ Pulls the pre-built Docker image (~16 GB)
+3. ✅ Downloads and installs `c2pa` wrapper scripts
+4. ✅ Configures PATH automatically
+5. ✅ Verifies installation
+
+**After installation (Windows users: restart PowerShell):**
+
+```bash
+# Quick test run with preset assets
+c2pa test
+
+# Full pipeline with preset assets
+c2pa run
+
+# Phase-by-phase execution
+c2pa phase 0             # Asset generation/loading
+c2pa phase 1             # C2PA embedding
+c2pa phase 2             # Transformations
+c2pa phase 2.5           # Platform testing setup (optional)
+c2pa phase 3             # Verification & metrics
+c2pa phase 4             # Analysis & visualization
+
+# Custom generation
+c2pa phase 0 --images 50 --videos 10    # Generate custom counts
+
+# Check status
+c2pa status
+
+# Interactive shell
+c2pa shell
+```
+
+**Configuration (optional):**
+```bash
+# Set custom Docker image
+export C2PA_IMAGE=aitchem037/c2pa-research:v1.0
+
+# Set custom data directory
+export C2PA_DATA_DIR=/path/to/results
+
+# Disable GPU (use CPU only)
+export C2PA_GPU=false
+```
+
+**What you get:**
+- ✅ One-command installation
+- ✅ Simple `c2pa` command instead of long docker commands
+- ✅ Automatic volume mounting to `./c2pa-results/`
+- ✅ GPU support configured automatically
+- ✅ Model cache persistence
+- ✅ Cross-platform compatibility
+- ✅ Preset assets included (10 images + 2 videos for quick testing)
+
+**Skip ahead to:** [Running Your First Test](#-running-your-first-test)
+
+---
+
+### Option 1: Pull Public Image (Manual Docker Commands)
 
 **Best for:** Reproducing published results, quick testing
 
 ```bash
 # Step 1: Pull the pre-built image (~16 GB download)
-docker pull yourusername/c2pa-research:latest
+docker pull aitchem037/c2pa-research:latest
 
 # Step 2: Verify image
 docker images | grep c2pa-research
@@ -194,7 +270,7 @@ cd my-research-data
 # Step 4: Run test to verify everything works
 docker run --rm --gpus all \
   -v $(pwd):/workspace/data \
-  yourusername/c2pa-research:latest run-all --test
+  aitchem037/c2pa-research:latest run-all --test
 ```
 
 **What you get:**
@@ -213,8 +289,8 @@ docker run --rm --gpus all \
 #### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/c2pa-robustness-research.git
-cd c2pa-robustness-research
+git clone https://github.com/AitchEm-bot/research.git
+cd research
 ```
 
 #### Step 2: Configure Environment (Optional)
@@ -349,6 +425,13 @@ cd c2pa-test-run
 
 ### Step 2: Run Test Pipeline
 
+**If you installed using Option 0 (Quick Install):**
+```bash
+c2pa test
+```
+
+**If you're using manual Docker commands (Option 1 or 2):**
+
 **Linux/macOS:**
 ```bash
 docker run --rm --gpus all \
@@ -459,15 +542,15 @@ docker logs -f c2pa-production-run
 ### Phase-by-Phase Execution
 
 ```bash
-# Phase 1: Generate AI assets (images and videos)
+# Phase 0: Generate AI assets (images and videos) - Optional, separate step
 docker run --gpus all \
   -v $(pwd)/data:/workspace/data \
-  c2pa-research phase1
+  c2pa-research phase0 --images 100 --videos 30
 
-# Phase 1.5: Embed C2PA manifests
+# Phase 1: Embed C2PA manifests (auto-copies presets if no assets exist)
 docker run --rm \
   -v $(pwd)/data:/workspace/data \
-  c2pa-research phase1.5
+  c2pa-research phase1
 
 # Phase 2: Apply transformations (compression and editing)
 docker run --rm \
@@ -1143,7 +1226,7 @@ docker tag c2pa-research c2pa-research:v1.0
 docker tag c2pa-research c2pa-research:2025-01-18
 
 # Future users can pull exact version
-docker pull yourusername/c2pa-research:v1.0
+docker pull aitchem037/c2pa-research:v1.0
 ```
 
 ### 5. Share Results and Environment Together
@@ -1297,8 +1380,8 @@ rm -rf data/results/
 
 ```bash
 # Fork and clone repository
-git clone https://github.com/yourusername/c2pa-robustness-research.git
-cd c2pa-robustness-research
+git clone https://github.com/AitchEm-bot/research.git
+cd research
 
 # Make changes to scripts/Dockerfile
 nano scripts/processing/generation/generate_images.py

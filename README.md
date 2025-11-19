@@ -8,7 +8,7 @@ This project implements an end-to-end, reproducible research pipeline to test th
 
 ## Project Status
 
-**Current Phase**: Phase 5 - Dockerization & Reproducibility ✅
+**Current Phase**: Phase 4 - Analysis & Visualization ✅
 
 Pipeline completion status:
 - ✅ Phase 1: Generation & C2PA Embedding (100 images, 110 videos)
@@ -16,8 +16,6 @@ Pipeline completion status:
 - ✅ Phase 2.5: Social Media Round-Trip Testing (160 platform samples)
 - ✅ Phase 3: Verification & Metric Computation (final_metrics.csv generated)
 - ✅ Phase 4: Data Analysis & Visualization
-- ✅ Phase 5: Dockerization & Reproducibility
-- ⏳ Phase 6: Paper-Ready Artifacts & Documentation
 
 ## Project Structure
 
@@ -57,8 +55,6 @@ research/
 │       ├── final_metrics.csv        # Merged comprehensive results (~3,620 rows)
 │       └── logs/                    # All execution logs
 ├── scripts/
-│   ├── run_pipeline.py              # 🐳 Master orchestrator for Docker (Phase 5)
-│   ├── docker_entrypoint.sh         # 🐳 Docker container startup script
 │   ├── common/                      # Shared utilities
 │   │   └── utils.py                 # Centralized functions (logging, CSV, paths)
 │   ├── c2pa/                        # C2PA operations
@@ -88,14 +84,9 @@ research/
 │               ├── process_platform_returns.py
 │               ├── rename_platform_returns.py
 │               └── rename_platform_uploads.py
-├── Dockerfile                       # 🐳 Docker image definition (CUDA 12.6 + Ubuntu 24.04)
-├── docker-compose.yml               # 🐳 Docker Compose configuration
-├── .dockerignore                    # 🐳 Docker build context optimization
-├── .env.example                     # 🐳 Environment variable template
 ├── CLAUDE.md                        # Project memory & agent constraints
 ├── FLOW_DIAGRAM.md                  # Pipeline visualization
-├── README.md                        # This file
-└── README_DOCKER.md                 # 🐳 Complete Docker deployment guide (1,357 lines)
+└── README.md                        # This file
 ```
 
 ## Research Pipeline Phases
@@ -212,49 +203,18 @@ research/
 
 **Goal:** Analyze correlations between visual quality degradation and metadata loss.
 
-**Planned Tasks:**
-- Correlation matrix for PSNR/SSIM/VMAF vs Manifest Retention
+**Analysis Tasks:**
+- VSR/SVR/HSR (Verification Success Rate, Signature Validity Rate, Hash Success Rate)
+- Correlation analysis for PSNR/SSIM/VMAF vs Manifest Retention
 - Distribution plots by transform type and platform
 - Heatmaps for integrity loss patterns
-- Statistical significance testing
-- Generate publication-ready plots
+- Transform impact visualization
+- Platform-specific comparison charts
 
 **Deliverables:**
-- ⏳ `plots/*.png` - Visualization outputs
-- ⏳ `analysis_summary.txt` - Data-backed insights for thesis
-
----
-
-### PHASE 5 — Dockerization & Reproducibility
-
-**Goal:** Containerize the full experiment pipeline for reproducibility.
-
-**Planned Tasks:**
-- Build Dockerfile with CUDA-enabled dependencies
-- Include PyTorch, FFmpeg, libvmaf, c2patool
-- Test on external GPU machine
-- Document full setup process
-
-**Deliverables:**
-- ⏳ `Dockerfile` with CUDA 12.1 support
-- ⏳ `README_DOCKER.md` with setup instructions
-
----
-
-### PHASE 6 — Paper-Ready Artifacts & Documentation
-
-**Goal:** Prepare all materials for IEEE-format publication.
-
-**Planned Tasks:**
-- Finalize methodology and results documentation
-- Generate citation bibliography
-- Export publication-ready figures
-- Write comprehensive experiment summary
-
-**Deliverables:**
-- ⏳ `references.bib` - Citation database
-- ⏳ `README_FOR_PAPER.md` - Experiment summary
-- ⏳ All analysis figures for paper inclusion
+- ✅ `data/results/analysis_results/csv/` - Statistical summaries (5 CSV files)
+- ✅ `data/results/analysis_results/plots/` - 11+ publication-ready plots (PNG, 300 DPI)
+- ✅ `data/results/analysis_results/report.html` - Interactive HTML dashboard
 
 ---
 
@@ -288,209 +248,125 @@ pip install -r requirements.txt
 winget install ffmpeg
 ```
 
-## Quick Start - Full Pipeline
+## Quick Start
 
-### Step 1: Generate Images (COMPLETED)
+### Option 1: Quick Install (Recommended - Using Docker)
+
+**For peer reviewers and researchers who want to reproduce results immediately:**
+
+**Linux/macOS:**
+```bash
+curl -sSL https://raw.githubusercontent.com/AitchEm-bot/research/master/quick-install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/AitchEm-bot/research/master/quick-install.ps1 | iex
+```
+
+**Then run (after restarting terminal on Windows):**
+```bash
+# Quick test with preset assets (10-20 minutes)
+c2pa test
+
+# Full pipeline with preset assets (4-8 hours)
+c2pa run
+
+# Phase-by-phase execution
+c2pa phase 0             # Asset generation/loading
+c2pa phase 1             # C2PA embedding
+c2pa phase 2             # Transformations
+c2pa phase 3             # Verification & metrics
+c2pa phase 4             # Analysis & visualization
+
+# Check status
+c2pa status
+
+# View results
+ls ./c2pa-results/
+```
+
+**What this does:**
+- ✅ Installs Docker image (aitchem037/c2pa-research:latest)
+- ✅ Sets up `c2pa` command-line wrapper
+- ✅ Includes preset assets (10 images + 2 videos)
+- ✅ Automatic GPU support and volume mounting
+- ✅ Results appear in `./c2pa-results/`
+
+**See [README_DOCKER.md](README_DOCKER.md) for complete Docker documentation.**
+
+---
+
+### Option 2: Manual Setup (For Development)
+
+**For researchers who want to modify the pipeline or run without Docker:**
+
+#### Step 1: Clone Repository
 
 ```bash
+git clone https://github.com/AitchEm-bot/research.git
+cd research
+```
+
+#### Step 2: Install Dependencies
+
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# OR
+.venv\Scripts\activate  # Windows
+
+# Install all dependencies with CUDA 12.1 support
+pip install -r requirements.txt
+
+# Install FFmpeg (system-wide)
+# Linux: sudo apt install ffmpeg
+# macOS: brew install ffmpeg
+# Windows: winget install ffmpeg
+```
+
+#### Step 3: Install c2patool
+
+Download from [contentauth/c2pa-rs releases](https://github.com/contentauth/c2pa-rs/releases) and place in `tools/c2patool/` or add to PATH.
+
+#### Step 4: Run Pipeline
+
+```bash
+# Phase 1: Generate images (or use preset assets)
 python scripts/processing/generation/generate_images.py \
     --seed 42 --count 100 --output-dir data/assets/raw_images
-```
 
-### Step 2: Sign Assets with C2PA (COMPLETED)
-
-```bash
+# Phase 1.5: Sign assets with C2PA
 python scripts/c2pa/embedding/embed_c2pa_v2.py
-```
 
-### Step 3: Run Transformations (COMPLETED)
-
-```bash
-# Image transformations
+# Phase 2: Run transformations
 python scripts/processing/transformations/compress_images.py
-
-# Video transformations
 python scripts/processing/transformations/compress_videos.py
-
-# Editing transformations
 python scripts/processing/transformations/edit_assets.py
-```
 
-### Step 4: Verify C2PA & Calculate Metrics (COMPLETED)
-
-```bash
-# C2PA verification
+# Phase 3: Verify C2PA & calculate metrics
 python scripts/c2pa/verification/verify_c2pa.py
-
-# Quality metrics
 python scripts/processing/metrics/calculate_quality_metrics.py
-
-# Merge results
 python scripts/processing/metrics/merge_results.py
-```
 
-### Step 5: Platform Testing (COMPLETED)
+# Phase 4: Analysis & visualization
+python scripts/analysis/run_phase4_analysis.py
 
-```bash
-# Prepare uploads
+# Phase 2.5 (Optional): Platform testing
 python scripts/processing/preprocessing/platform/prepare_platform_uploads.py --auto-sample
-
-# [Manual upload/download steps]
-
-# Process returns
+# [Manual upload/download to social media platforms]
 python scripts/processing/preprocessing/platform/process_platform_returns.py
-
-# Merge with final results
-python scripts/processing/metrics/merge_results.py
 ```
 
-## 🐳 Docker Support (Phase 5) ✅
-
-**Status**: Complete and production-ready
-
-Run the entire pipeline in a reproducible containerized environment with full GPU acceleration. Docker ensures identical results across different machines, eliminating dependency conflicts and simplifying deployment.
-
-### Quick Start
+#### Step 5: View Results
 
 ```bash
-# 1. Build the Docker image
-docker build -t c2pa-research .
-
-# 2. Run test pipeline (10-20 minutes)
-docker run --rm --gpus all \
-  -v $(pwd)/data:/workspace/data \
-  c2pa-research run-all --test
-
-# 3. Run complete pipeline (4-8 hours)
-docker run --gpus all \
-  -v $(pwd)/data:/workspace/data \
-  -v huggingface-cache:/workspace/.cache/huggingface \
-  --name c2pa-production \
-  c2pa-research run-all
-
-# 4. Access results
-cat data/results/csv/final_metrics.csv
-# Or open in Excel: start excel data/results/csv/final_metrics.csv
+# Results are saved in:
+# data/results/csv/final_metrics.csv - Complete dataset (~3,620 rows)
+# data/results/analysis_results/plots/ - Visualization outputs
+# data/results/analysis_results/report.html - Interactive dashboard
 ```
-
-### Key Features
-
-- ✅ **CUDA 12.6 Support**: Full GPU acceleration (RTX 4060 optimized, 8GB VRAM)
-- ✅ **Master Orchestrator**: `run_pipeline.py` coordinates all 5 phases with progress tracking
-- ✅ **Volume Persistence**: Files persist on local machine via volume mounting
-- ✅ **Model Caching**: Named volumes prevent re-downloading models (4+ GB)
-- ✅ **Checkpoint System**: Resume from any phase if interrupted
-- ✅ **Environment Configuration**: `.env` file for GPU memory settings
-- ✅ **Cross-Platform**: Works on Windows (WSL2), Linux, macOS
-
-### Docker Environment
-
-**Image Details:**
-- Base: `nvidia/cuda:12.6.0-cudnn-runtime-ubuntu24.04`
-- Python: 3.12.3
-- PyTorch: 2.5.1 with CUDA 12.1 support
-- Size: ~16 GB (includes all dependencies)
-- Dependencies: Pre-installed PyTorch, Diffusers, FFmpeg, c2patool integration
-
-**Files Created:**
-- `Dockerfile` (135 lines): Multi-stage build with CUDA support
-- `docker-compose.yml` (83 lines): GPU configuration and volume management
-- `scripts/run_pipeline.py` (532 lines): Master orchestrator with checkpoint system
-- `scripts/docker_entrypoint.sh` (175 lines): Environment validation and startup
-- `.dockerignore` (79 lines): Optimized build context
-- `.env.example` (94 lines): Environment variable template
-- `README_DOCKER.md` (1,357 lines): **Comprehensive deployment guide**
-
-### Volume Mounting (Critical!)
-
-**⚠️ Important**: Always use `-v` volume mounting to persist results:
-
-```bash
-# ✅ GOOD - Results saved to your machine
-docker run --gpus all \
-  -v $(pwd)/data:/workspace/data \
-  c2pa-research run-all --test
-
-# ❌ BAD - Results trapped inside container and lost!
-docker run --gpus all c2pa-research run-all --test
-```
-
-**What happens with volume mounting:**
-```
-Container creates:              Your local machine:
-/workspace/data/results/     ⟺  C:\Users\you\research\data\results\
-  └─ final_metrics.csv          ✅ Appears instantly
-                                ✅ Persists after container stops
-                                ✅ Open in Excel, pandas, etc.
-```
-
-### Available Commands
-
-```bash
-# Show help
-docker run --rm c2pa-research --help
-
-# Run specific phase
-docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase1
-docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase2
-docker run --gpus all -v $(pwd)/data:/workspace/data c2pa-research phase3
-
-# Resume from checkpoint
-docker run --gpus all -v $(pwd)/data:/workspace/data \
-  c2pa-research run-all --resume-from 2
-
-# Check pipeline status
-docker run --rm -v $(pwd)/data:/workspace/data c2pa-research status
-
-# Interactive shell
-docker run --rm -it --gpus all \
-  -v $(pwd)/data:/workspace/data \
-  c2pa-research bash
-```
-
-### Using Docker Compose (Recommended)
-
-```bash
-# Start pipeline in background
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop pipeline
-docker-compose down
-```
-
-### Expected Performance
-
-**RTX 4060 8GB benchmarks:**
-- Test mode: 10-20 minutes
-- Full mode: 4-8 hours
-- Disk usage: ~16 GB (image) + ~5 GB (models) + ~20 GB (results)
-
-### Troubleshooting
-
-**"No files in data/ directory"**
-→ You forgot volume mounting! Add `-v $(pwd)/data:/workspace/data`
-
-**"CUDA out of memory"**
-→ Reduce memory: `-e PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256`
-
-**"Could not select device driver"**
-→ Windows: Enable WSL2 in Docker Desktop
-→ Linux: Install nvidia-container-toolkit
-
-### Complete Documentation
-
-See **[README_DOCKER.md](README_DOCKER.md)** for comprehensive guide including:
-- Prerequisites and system requirements
-- Step-by-step deployment instructions
-- Understanding Docker concepts (images, containers, volumes)
-- File storage and persistence explained
-- Accessing and analyzing results
-- GPU configuration and optimization
-- Troubleshooting common issues
-- Best practices for reproducibility
 
 ## Testing & Debugging
 

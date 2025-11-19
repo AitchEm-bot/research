@@ -1,0 +1,46 @@
+# C2PA Robustness Research - Git Attributes
+# Ensures proper line endings across platforms
+
+# Auto-detect text files
+* text=auto
+
+# Shell scripts must use LF (Linux/macOS)
+*.sh text eol=lf
+c2pa text eol=lf
+install.sh text eol=lf
+
+# Batch files must use CRLF (Windows)
+*.bat text eol=crlf
+
+# PowerShell scripts use CRLF
+*.ps1 text eol=crlf
+
+# Python files use LF
+*.py text eol=lf
+
+# Markdown and documentation use LF
+*.md text eol=lf
+*.txt text eol=lf
+
+# Configuration files use LF
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+.env text eol=lf
+.env.example text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary

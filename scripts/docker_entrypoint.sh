@@ -145,10 +145,19 @@ if [ $# -eq 0 ]; then
     echo -e "\n${YELLOW}No command specified. Showing pipeline help:${NC}\n"
     python3 "$PIPELINE_SCRIPT" --help
     echo -e "\n${BLUE}Example commands:${NC}"
-    echo "  docker run c2pa-research run-all          # Run complete pipeline"
-    echo "  docker run c2pa-research run-all --test   # Run in test mode"
-    echo "  docker run c2pa-research phase1           # Run only Phase 1"
-    echo "  docker run c2pa-research status            # Check pipeline status"
+    echo "  docker run c2pa-research run-all                    # Run phases 1-4 (starts from embedding)"
+    echo "  docker run c2pa-research run-all --test             # Run in test mode"
+    echo "  docker run c2pa-research phase0 --images 50         # Asset generation (phase 0)"
+    echo "  docker run c2pa-research phase1                     # C2PA embedding (phase 1)"
+    echo "  docker run c2pa-research phase2                     # Transformations (phase 2)"
+    echo "  docker run c2pa-research phase2_5                   # Platform testing setup (phase 2.5)"
+    echo "  docker run c2pa-research phase3                     # Verification & metrics (phase 3)"
+    echo "  docker run c2pa-research phase4                     # Analysis (phase 4)"
+    echo "  docker run c2pa-research status                     # Check pipeline status"
+    echo ""
+    echo "  # With wrapper script:"
+    echo "  c2pa phase 0 --images 50 --videos 10                # Generate 50 images + 10 videos"
+    echo "  c2pa run                                            # Full pipeline (phases 1-4, uses presets)"
     exit 0
 fi
 

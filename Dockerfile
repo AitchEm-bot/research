@@ -94,7 +94,31 @@ RUN mkdir -p data/assets/raw_images \
              data/results/logs \
              data/results/analysis_results \
              /workspace/.cache/huggingface \
-             /workspace/.cache/torch
+             /workspace/.cache/torch \
+             /workspace/preset_assets/raw_images \
+             /workspace/preset_assets/raw_videos \
+             /workspace/preset_assets/raw_images_for_videos \
+             /workspace/preset_assets/raw_out_videos
+
+# --------------------------
+# Preset Assets (for testing/reproducibility)
+# --------------------------
+# Include sample assets so peer reviewers can run immediately
+# Test version: 10 images + 2 external videos + 2 conditioning images
+# Full version (later): All 100 images + 30 internal + 60 external videos
+
+# Copy raw images (seeds 42-51, 10 images for testing)
+COPY data/assets/raw_images/img_00[0-9]_seed4[2-9]*.png /workspace/preset_assets/raw_images/
+COPY data/assets/raw_images/img_00[0-9]_seed5[01]*.png /workspace/preset_assets/raw_images/
+COPY data/assets/raw_images/img_00[0-9]_seed4[2-9]*.json /workspace/preset_assets/raw_images/
+COPY data/assets/raw_images/img_00[0-9]_seed5[01]*.json /workspace/preset_assets/raw_images/
+
+# Copy conditioning images for video generation (seeds 100-101)
+COPY data/assets/raw_images_for_videos/vidimg_00[01]*.png /workspace/preset_assets/raw_images_for_videos/
+COPY data/assets/raw_images_for_videos/vidimg_00[01]*.json /workspace/preset_assets/raw_images_for_videos/
+
+# Copy external videos from Veo3.1 (video_1.mp4 and video_2.mp4 for testing)
+COPY data/assets/raw_out_videos/video_[12].mp4 /workspace/preset_assets/raw_out_videos/
 
 # --------------------------
 # Environment Variables

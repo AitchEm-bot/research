@@ -1,3 +1,56 @@
+# C2PA Robustness Research Pipeline - Complete Flow Diagram
+
+## Table of Contents
+1. [Complete Pipeline Overview](#complete-pipeline-overview)
+2. [External Video Flow](#external-video-flow)
+3. [Image Generation Flow](#image-generation-flow)
+4. [Video Generation Flow (Deprecated)](#video-generation-flow-removed---only-external-videos-now)
+5. [Platform Round-Trip Flow (Phase 2.5)](#platform-round-trip-flow-phase-25)
+6. [Phase 4: Analysis & Visualization Flow](#phase-4-analysis--visualization-flow)
+
+---
+
+## COMPLETE PIPELINE OVERVIEW
+---
+  High-Level Architecture
+
+  🎨 PHASE 0/1: ASSET GENERATION & PREPARATION
+     ├─ Generate 100 images (Stable Diffusion v1.4, 1024×1024)
+     ├─ Load 60 external videos (Google Veo3.1)
+     └─ Embed C2PA manifests with ES256 test certificates
+           ↓
+  🔧 PHASE 1.5: C2PA EMBEDDING
+     └─ Sign all assets with C2PA manifests
+           ↓
+  🔄 PHASE 2: TRANSFORMATIONS
+     ├─ Compression: JPEG (4 levels), PNG (2 levels), H.264 (3 levels), H.265 (2 levels), FPS (2 levels)
+     └─ Editing: Crop (3 levels), Resize (2 levels), Rotate (3 levels), Color (6 levels), Trim (3 levels)
+           ↓
+  📱 PHASE 2.5: PLATFORM TESTING (Optional)
+     └─ Manual upload/download to 6 social media platforms
+           ↓
+  🔍 PHASE 3: VERIFICATION & METRICS
+     ├─ C2PA Verification: manifest_present, verified, signature_valid, hash_match
+     └─ Quality Metrics: PSNR, SSIM, VMAF (aligned & stretched)
+           ↓
+  📊 PHASE 4: ANALYSIS & VISUALIZATION
+     ├─ Statistical Analysis: VSR, SVR, HSR, mean/median quality
+     ├─ Visualizations: 11+ plots (transform impact, quality distribution, platform comparison)
+     └─ Report Generation: HTML dashboard with findings
+           ↓
+  🎯 FINAL OUTPUT
+     └─ final_metrics.csv (3820 rows) + analysis_results/ (plots + summaries + report)
+
+  Pipeline Statistics:
+  ────────────────────────
+  • Total Assets Generated: 160 (100 images + 60 videos)
+  • Total Transformations: 3660 (2400 images + 1260 videos)
+  • Optional Platform Tests: 160 (100 images + 60 videos)
+  • Final Dataset Rows: 3820
+  • Execution Time: 4-8 hours (full run), 10-20 minutes (test mode)
+
+  ---
+
 ## EXTERNAL VIDEO FLOW
   ---
   Visual Flow Diagram
@@ -179,5 +232,83 @@
            ↓
   📄 final_metrics.csv
      (complete dataset: 2400 images + 1260 videos + 160 platform = 3820 rows)
+
+  ---
+
+## PHASE 4: ANALYSIS & VISUALIZATION FLOW
+---
+  Visual Flow Diagram
+
+  📊 INPUT: Complete Dataset
+           ↓
+  📄 data/results/csv/final_metrics.csv
+     ✓ 2400 image transformations
+     ✓ 1260 video transformations
+     ✓ 160 platform round-trips (optional)
+     ✓ Total: 3820 rows with C2PA + quality metrics
+           ↓
+      [run_phase4_analysis.py]
+      ✓ Load and validate data
+      ✓ Calculate aggregate statistics
+      ✓ Generate visualizations
+      ✓ Produce summary reports
+           ↓
+      ┌────────────────┴────────────────┐
+      ↓                                 ↓
+  📈 STATISTICAL ANALYSIS          🎨 VISUALIZATION
+      ↓                                 ↓
+  ✓ VSR (Verification Success Rate)   ✓ VSR by Transform Type
+  ✓ SVR (Signature Validity Rate)     ✓ VSR by Transform Level
+  ✓ HSR (Hash Success Rate)           ✓ Quality Distribution (PSNR/SSIM/VMAF)
+  ✓ Mean/Median Quality Metrics       ✓ Quality vs C2PA Survival Scatter
+  ✓ Quality Degradation per Transform ✓ Transform Impact Heatmap
+  ✓ Platform-specific Statistics      ✓ Platform Comparison Charts
+  ✓ Asset Type Comparison (img/vid)   ✓ Asset Type Performance
+      ↓                                 ↓
+  📁 data/results/analysis_results/csv/
+     ✓ summary_statistics.csv
+     ✓ vsr_by_transform.csv
+     ✓ quality_by_transform.csv
+     ✓ platform_survival_rates.csv
+     ✓ failure_reasons.csv
+           ↓
+  📁 data/results/analysis_results/plots/
+     ✓ vsr_by_transform_type.png
+     ✓ vsr_by_transform_level.png
+     ✓ quality_distribution_boxplot.png
+     ✓ quality_vs_vsr_scatter.png
+     ✓ psnr_by_transform.png
+     ✓ ssim_by_transform.png
+     ✓ vmaf_by_transform.png
+     ✓ transform_impact_heatmap.png
+     ✓ platform_comparison_bar.png
+     ✓ asset_type_comparison.png
+     ✓ failure_reasons_pie.png
+           ↓
+  📄 data/results/analysis_results/report.html
+     ✓ Interactive dashboard
+     ✓ Embedded visualizations
+     ✓ Statistical summaries
+     ✓ Key findings
+     ✓ Methodology notes
+           ↓
+  🎯 COMPLETE: Ready for Publication
+
+  Key Metrics Calculated:
+  ────────────────────────
+  • VSR (Verification Success Rate): % manifests surviving transform
+  • SVR (Signature Validity Rate): % cryptographic signatures valid
+  • HSR (Hash Success Rate): % content hashes matching
+  • Mean PSNR/SSIM/VMAF: Average quality degradation
+  • Lossless Transform Validation: PNG compression validation
+  • Platform Survival: Social media C2PA persistence rates
+
+  Output Summary:
+  ────────────────────────
+  • 11+ visualization plots (PNG, 300 DPI)
+  • 5 statistical summary CSVs
+  • 1 HTML interactive report
+  • Console output with key findings
+  • All outputs saved to: data/results/analysis_results/
 
   ---
