@@ -455,4 +455,4 @@ This is a research project. See individual library licenses for dependencies.
 
 Project Lead: Hani Moustafa
 
-For questions or issues with this pipeline, please refer to the project documentation (CLAUDE.md, FLOW_DIAGRAM.md) or contact the project lead.
+For questions or issues with this pipeline, please refer to the project documentations or create a ticket!

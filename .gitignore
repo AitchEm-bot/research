@@ -157,6 +157,7 @@ nul
 
 # Claude Code
 .claude/
+CLAUDE.md
 
 # Windows
 Thumbs.db
