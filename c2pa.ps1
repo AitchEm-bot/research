@@ -93,7 +93,7 @@ For detailed instructions, see README_DOCKER.md section on Platform Testing.
 
     Write-Host ""
     Write-Host "+================================================================+" -ForegroundColor Cyan
-    Write-Host "|              PLATFORM TESTING SETUP COMPLETE                  |" -ForegroundColor Cyan
+    Write-Host "|              PLATFORM TESTING SETUP COMPLETE                   |" -ForegroundColor Cyan
     Write-Host "+================================================================+" -ForegroundColor Cyan
     Write-Host ""
     Write-Host $instructionsContent

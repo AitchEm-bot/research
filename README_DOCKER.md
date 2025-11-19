@@ -22,40 +22,40 @@ Before starting, understand these key concepts:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  DOCKER IMAGE (c2pa-research)                          │
-│  ─────────────────────────────────────────────────     │
-│  Like a "template" or "recipe" containing:             │
-│  • Ubuntu 24.04 + Python 3.12                          │
-│  • PyTorch, CUDA, FFmpeg                               │
-│  • Your research scripts                               │
-│  • Empty folder structure                              │
+│  DOCKER IMAGE (c2pa-research)                           │
+│  ─────────────────────────────────────────────────      │
+│  Like a "template" or "recipe" containing:              │
+│  • Ubuntu 24.04 + Python 3.12                           │
+│  • PyTorch, CUDA, FFmpeg                                │
+│  • Your research scripts                                │
+│  • Empty folder structure                               │
 │                                                         │
-│  Size: ~16 GB                                          │
-│  Storage: Docker's internal database                   │
-│  NOT directly browseable as regular files              │
+│  Size: ~16 GB                                           │
+│  Storage: Docker's internal database                    │
+│  NOT directly browseable as regular files               │
 └─────────────────────────────────────────────────────────┘
                          ↓ docker run
 ┌─────────────────────────────────────────────────────────┐
-│  CONTAINER (running instance)                          │
-│  ─────────────────────────────────────────────────     │
-│  Like a "cookie" made from the template:               │
-│  • Isolated environment                                │
-│  • Can read/write files inside                         │
-│  • Changes disappear when stopped (unless mounted)     │
+│  CONTAINER (running instance)                           │
+│  ─────────────────────────────────────────────────      │
+│  Like a "cookie" made from the template:                │
+│  • Isolated environment                                 │
+│  • Can read/write files inside                          │
+│  • Changes disappear when stopped (unless mounted)      │
 │                                                         │
-│  Each container is completely independent              │
+│  Each container is completely independent               │
 └─────────────────────────────────────────────────────────┘
                          ↕ Volume Mount (-v)
 ┌─────────────────────────────────────────────────────────┐
-│  YOUR LOCAL MACHINE                                    │
-│  ─────────────────────────────────────────────────     │
-│  C:\Users\you\research\data\  (Windows)                │
-│  /home/you/research/data/      (Linux)                 │
+│  YOUR LOCAL MACHINE                                     │
+│  ─────────────────────────────────────────────────      │
+│  C:\Users\you\research\data\  (Windows)                 │
+│  /home/you/research/data/      (Linux)                  │
 │                                                         │
-│  • Directly accessible files                           │
-│  • Visible in File Explorer / Finder                   │
-│  • Persist forever after container stops               │
-│  • Can commit to git, share with others                │
+│  • Directly accessible files                            │
+│  • Visible in File Explorer / Finder                    │
+│  • Persist forever after container stops                │
+│  • Can commit to git, share with others                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -165,13 +165,13 @@ docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
 
 ### System Requirements
 
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| **GPU** | NVIDIA GPU with 6GB VRAM | RTX 4060 (8GB) or better |
-| **RAM** | 16GB | 32GB |
-| **Storage** | 50GB free | 100GB free |
-| **OS** | Windows 10/11, Ubuntu 20.04+ | Windows 11, Ubuntu 24.04 |
-| **CPU** | 4 cores | 8+ cores |
+|  Component  |            Minimum               |       Recommended        |
+|-------------|----------------------------------|--------------------------|
+|   **GPU**   |     NVIDIA GPU with 6GB VRAM     | RTX 4060 (8GB) or better |
+|   **RAM**   |             16GB                 |         32GB             |
+| **Storage** |          50GB free               |      100GB free          |
+|   **OS**    |   Windows 10/11, Ubuntu 20.04+   | Windows 11, Ubuntu 24.04 |
+|  **CPU**    |            4 cores               |        8+ cores          |
 
 ---
 

@@ -84,7 +84,7 @@ EOF
 
     echo ""
     echo "+================================================================+"
-    echo "|              PLATFORM TESTING SETUP COMPLETE                  |"
+    echo "|              PLATFORM TESTING SETUP COMPLETE                   |"
     echo "+================================================================+"
     echo ""
     cat "$OUTPUT_DIR/PLATFORM_UPLOAD_INSTRUCTIONS.txt"
@@ -247,8 +247,8 @@ esac
 if [ -f "$OUTPUT_DIR/csv/final_metrics.csv" ]; then
     echo ""
     echo "+================================================================+"
-    echo "| Results available in: $OUTPUT_DIR"
-    echo "| Metrics CSV: $OUTPUT_DIR/csv/final_metrics.csv"
-    echo "| Plots: $OUTPUT_DIR/plots/"
+    echo "| Results available in: $OUTPUT_DIR                              |"
+    echo "| Metrics CSV: $OUTPUT_DIR/csv/final_metrics.csv                 |"
+    echo "| Plots: $OUTPUT_DIR/plots/                                      |"
     echo "+================================================================+"
 fi

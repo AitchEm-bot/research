@@ -154,9 +154,9 @@ echo - whatsapp\     (images + videos)>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTI
 echo.>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 
 echo.
-echo +================================================================+
+echo  +================================================================+
 echo ^|              PLATFORM TESTING SETUP COMPLETE                  ^|
-echo +================================================================+
+echo  +================================================================+
 echo.
 type "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo.
@@ -285,11 +285,11 @@ goto END
 REM Show results summary if CSV exists
 if exist "%OUTPUT_DIR%\csv\final_metrics.csv" (
     echo.
-    echo +================================================================+
-    echo ^| Results available in: %OUTPUT_DIR%
-    echo ^| Metrics CSV: %OUTPUT_DIR%\csv\final_metrics.csv
-    echo ^| Plots: %OUTPUT_DIR%\plots\
-    echo +================================================================+
+    echo  +================================================================+
+    echo ^| Results available in: %OUTPUT_DIR%                            ^|
+    echo ^| Metrics CSV: %OUTPUT_DIR%\csv\final_metrics.csv               ^|
+    echo ^| Plots: %OUTPUT_DIR%\plots\                                    ^|
+    echo  +================================================================+
 )
 
 endlocal
