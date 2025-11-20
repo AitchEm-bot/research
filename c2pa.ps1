@@ -34,7 +34,7 @@ function Test-GpuAvailable {
 function Invoke-DockerCommand {
     param(
         [bool]$UseGpu,
-        [string[]]$Args
+        [string[]]$CommandArgs
     )
 
     $dockerArgs = @("run", "--rm")
@@ -54,13 +54,8 @@ function Invoke-DockerCommand {
         "-v", "torch-cache:/workspace/.cache/torch"
     )
 
-    # Mount tools directory if it exists
-    if (Test-Path $ToolsDir) {
-        $dockerArgs += @("-v", "$($ToolsDir):/workspace/tools")
-    }
-
     $dockerArgs += $Image
-    $dockerArgs += $Args
+    $dockerArgs += $CommandArgs
 
     & docker @dockerArgs
 }
@@ -130,17 +125,17 @@ switch ($Command) {
         switch ($Phase) {
             "0" {
                 Write-Host "[Phase 0: Asset Generation]" -ForegroundColor Yellow
-                Invoke-DockerCommand -UseGpu $true -Args (@("phase0") + $Arguments)
+                Invoke-DockerCommand -UseGpu $true -CommandArgs (@("phase0") + $Arguments)
             }
 
             "1" {
                 Write-Host "[Phase 1: C2PA Manifest Embedding]" -ForegroundColor Yellow
-                Invoke-DockerCommand -UseGpu $false -Args (@("phase1") + $Arguments)
+                Invoke-DockerCommand -UseGpu $false -CommandArgs (@("phase1") + $Arguments)
             }
 
             "2" {
                 Write-Host "[Phase 2: Transformation Pipeline]" -ForegroundColor Yellow
-                Invoke-DockerCommand -UseGpu $false -Args (@("phase2") + $Arguments)
+                Invoke-DockerCommand -UseGpu $false -CommandArgs (@("phase2") + $Arguments)
             }
 
             "2.5" {
@@ -149,7 +144,7 @@ switch ($Command) {
                 New-PlatformDirectories
 
                 # Run platform upload preparation
-                Invoke-DockerCommand -UseGpu $false -Args (@("phase2_5") + $Arguments)
+                Invoke-DockerCommand -UseGpu $false -CommandArgs (@("phase2_5") + $Arguments)
 
                 # Generate instructions
                 New-PlatformInstructions
@@ -157,12 +152,12 @@ switch ($Command) {
 
             "3" {
                 Write-Host "[Phase 3: Verification & Quality Metrics]" -ForegroundColor Yellow
-                Invoke-DockerCommand -UseGpu $true -Args (@("phase3") + $Arguments)
+                Invoke-DockerCommand -UseGpu $true -CommandArgs (@("phase3") + $Arguments)
             }
 
             "4" {
                 Write-Host "[Phase 4: Analysis & Visualization]" -ForegroundColor Yellow
-                Invoke-DockerCommand -UseGpu $false -Args (@("phase4") + $Arguments)
+                Invoke-DockerCommand -UseGpu $false -CommandArgs (@("phase4") + $Arguments)
             }
 
             default {
@@ -186,17 +181,17 @@ switch ($Command) {
     "run" {
         Write-Host "[Full Pipeline: Phases 1-4, starts from embedding]" -ForegroundColor Yellow
         Write-Host "Note: Phase 0 (generation) is separate. Preset assets will be used." -ForegroundColor Cyan
-        Invoke-DockerCommand -UseGpu $true -Args (@("run-all") + $Arguments)
+        Invoke-DockerCommand -UseGpu $true -CommandArgs (@("run-all") + $Arguments)
     }
 
     "test" {
         Write-Host "[Quick Test Mode: Phases 1-4 with preset assets]" -ForegroundColor Yellow
-        Invoke-DockerCommand -UseGpu $true -Args @("run-all", "--test")
+        Invoke-DockerCommand -UseGpu $true -CommandArgs @("run-all", "--test")
     }
 
     "status" {
         Write-Host "[Pipeline Status Check]" -ForegroundColor Yellow
-        Invoke-DockerCommand -UseGpu $false -Args @("status")
+        Invoke-DockerCommand -UseGpu $false -CommandArgs @("status")
     }
 
     "shell" {
@@ -269,7 +264,7 @@ For detailed documentation, see README_DOCKER.md
         }
 
         # Forward unknown commands directly to Docker
-        Invoke-DockerCommand -UseGpu $true -Args (@($Command) + $Arguments)
+        Invoke-DockerCommand -UseGpu $true -CommandArgs (@($Command) + $Arguments)
     }
 }
 
