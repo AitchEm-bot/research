@@ -254,6 +254,32 @@ winget install ffmpeg
 
 **For peer reviewers and researchers who want to reproduce results immediately:**
 
+#### Prerequisites
+
+- **Docker** installed and running
+- **NVIDIA GPU** (optional, for asset generation in Phase 0)
+- **nvidia-container-toolkit** (required for GPU support)
+
+**Install nvidia-container-toolkit (Ubuntu/Debian):**
+```bash
+# Add NVIDIA container toolkit repo
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+# Install and configure
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+# Verify installation
+docker run --rm --gpus all nvidia/cuda:12.1-base-ubuntu22.04 nvidia-smi
+```
+
+#### Installation
+
 **Linux/macOS:**
 ```bash
 curl -sSL https://raw.githubusercontent.com/AitchEm-bot/research/master/quick-install.sh | bash
@@ -292,6 +318,25 @@ ls ./c2pa-results/
 - ✅ Includes preset assets (10 images + 2 videos)
 - ✅ Automatic GPU support and volume mounting
 - ✅ Results appear in `./c2pa-results/`
+
+#### Troubleshooting
+
+**Error: `could not select device driver "" with capabilities: [[gpu]]`**
+- nvidia-container-toolkit is not installed
+- Follow the installation steps in Prerequisites above
+
+**Error: `pull access denied for c2pa-research`**
+- Wrong image name in wrapper
+- Re-download wrapper: `curl -sSL https://raw.githubusercontent.com/AitchEm-bot/research/master/c2pa -o ~/.local/bin/c2pa`
+
+**Message: `No GPU detected - running in CPU-only mode`**
+- This is normal for Phase 1-4 (they don't need GPU)
+- GPU is only used in Phase 0 (asset generation)
+- If you need GPU for Phase 0, ensure nvidia-container-toolkit is installed
+
+**Error: `c2patool not found`**
+- The Docker image includes c2patool, ensure you have the latest image
+- Run: `docker pull aitchem037/c2pa-research:latest`
 
 **See [README_DOCKER.md](README_DOCKER.md) for complete Docker documentation.**
 
