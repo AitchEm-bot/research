@@ -82,12 +82,19 @@ if os.getenv('C2PATOOL_PATH'):
     C2PATOOL_LOCAL = Path(C2PATOOL_CMD)
 else:
     # Check multiple locations in order of preference
-    possible_paths = [
-        PROJECT_ROOT / "tools/c2patool/c2patool/c2patool.exe",  # Windows local
-        PROJECT_ROOT / "tools/c2patool/c2patool_linux",         # Linux binary in Docker
-        PROJECT_ROOT / "tools/c2patool/c2patool",               # Linux local (alternative)
-        Path("/usr/local/bin/c2patool"),                        # System install
-    ]
+    # Use OS-specific paths to avoid selecting wrong binary
+    import platform
+    if platform.system() == "Windows":
+        possible_paths = [
+            PROJECT_ROOT / "tools/c2patool/c2patool/c2patool.exe",  # Windows local
+            Path("c2patool"),                                       # System PATH
+        ]
+    else:
+        possible_paths = [
+            PROJECT_ROOT / "tools/c2patool/c2patool_linux",         # Linux binary in Docker
+            PROJECT_ROOT / "tools/c2patool/c2patool",               # Linux local (alternative)
+            Path("/usr/local/bin/c2patool"),                        # System install
+        ]
     C2PATOOL_LOCAL = None
     for path in possible_paths:
         if path.exists():
