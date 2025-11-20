@@ -81,9 +81,19 @@ if os.getenv('C2PATOOL_PATH'):
     C2PATOOL_CMD = os.getenv('C2PATOOL_PATH')
     C2PATOOL_LOCAL = Path(C2PATOOL_CMD)
 else:
-    # Fallback to local Windows path
-    C2PATOOL_LOCAL = PROJECT_ROOT / "tools/c2patool/c2patool/c2patool.exe"
-    C2PATOOL_CMD = str(C2PATOOL_LOCAL) if C2PATOOL_LOCAL.exists() else "c2patool"
+    # Check multiple locations in order of preference
+    possible_paths = [
+        PROJECT_ROOT / "tools/c2patool/c2patool/c2patool.exe",  # Windows local
+        PROJECT_ROOT / "tools/c2patool/c2patool",               # Linux local (mounted in Docker)
+        PROJECT_ROOT / "tools/c2patool",                        # Direct binary
+        Path("/usr/local/bin/c2patool"),                        # System install
+    ]
+    C2PATOOL_LOCAL = None
+    for path in possible_paths:
+        if path.exists():
+            C2PATOOL_LOCAL = path
+            break
+    C2PATOOL_CMD = str(C2PATOOL_LOCAL) if C2PATOOL_LOCAL else "c2patool"
 
 # Lossless transform types (from CLAUDE.md)
 LOSSLESS_TRANSFORMS = {'png_c0', 'png_c9'}

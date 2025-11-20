@@ -60,14 +60,9 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt \
 # --------------------------
 # C2PA Tool
 # --------------------------
-# Note: c2patool installation skipped - should be installed on host system
-# The pipeline uses c2patool via utils.py which looks for it in:
-# 1. Environment variable: C2PATOOL_PATH
-# 2. Local path: tools/c2patool/c2patool/c2patool.exe (Windows)
-# 3. System PATH: c2patool
-#
-# For Docker usage, install c2patool manually or mount it as a volume
-# See README_DOCKER.md for installation instructions
+# Note: c2patool runs on host system, mounted via -v flag
+# Download from: https://github.com/contentauth/c2pa-rs/releases
+# Place in: tools/c2patool/ directory
 
 # --------------------------
 # Copy project files

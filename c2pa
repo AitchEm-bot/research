@@ -7,7 +7,7 @@ set -e
 # Configuration
 IMAGE="${C2PA_IMAGE:-aitchem037/c2pa-research:latest}"
 OUTPUT_DIR="${C2PA_DATA_DIR:-./c2pa-results}"
-GPU_FLAG="${C2PA_GPU:---gpus all}"
+TOOLS_DIR="${C2PA_TOOLS_DIR:-./tools}"
 
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
@@ -16,23 +16,39 @@ mkdir -p "$OUTPUT_DIR"
 docker volume create huggingface-cache >/dev/null 2>&1 || true
 docker volume create torch-cache >/dev/null 2>&1 || true
 
+# Check if GPU is available
+check_gpu() {
+    if docker run --rm --gpus all hello-world >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Helper function to run Docker
 run_docker() {
     local use_gpu="$1"
     shift
 
+    # Build volume mounts
+    local volumes="-v $OUTPUT_DIR:/workspace/data"
+    volumes="$volumes -v huggingface-cache:/workspace/.cache/huggingface"
+    volumes="$volumes -v torch-cache:/workspace/.cache/torch"
+
+    # Mount tools directory if it exists
+    if [ -d "$TOOLS_DIR" ]; then
+        volumes="$volumes -v $TOOLS_DIR:/workspace/tools"
+    fi
+
     if [ "$use_gpu" = "true" ]; then
-        docker run --rm $GPU_FLAG \
-            -v "$OUTPUT_DIR:/workspace/data" \
-            -v huggingface-cache:/workspace/.cache/huggingface \
-            -v torch-cache:/workspace/.cache/torch \
-            "$IMAGE" "$@"
+        if check_gpu; then
+            docker run --rm --gpus all $volumes "$IMAGE" "$@"
+        else
+            echo "[!] GPU not available, running in CPU mode"
+            docker run --rm $volumes "$IMAGE" "$@"
+        fi
     else
-        docker run --rm \
-            -v "$OUTPUT_DIR:/workspace/data" \
-            -v huggingface-cache:/workspace/.cache/huggingface \
-            -v torch-cache:/workspace/.cache/torch \
-            "$IMAGE" "$@"
+        docker run --rm $volumes "$IMAGE" "$@"
     fi
 }
 

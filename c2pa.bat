@@ -23,6 +23,12 @@ if "%C2PA_GPU%"=="" (
     set GPU_FLAG=%C2PA_GPU%
 )
 
+if "%C2PA_TOOLS_DIR%"=="" (
+    set TOOLS_DIR=%cd%\tools
+) else (
+    set TOOLS_DIR=%C2PA_TOOLS_DIR%
+)
+
 REM Create output directory
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
@@ -81,6 +87,7 @@ docker run --rm %GPU_FLAG% ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% phase0 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto END
 
@@ -92,6 +99,7 @@ docker run --rm ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% phase1 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto END
 
@@ -103,6 +111,7 @@ docker run --rm ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% phase2 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto END
 
@@ -123,6 +132,7 @@ docker run --rm ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% phase2_5 %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 REM Generate instructions
@@ -172,6 +182,7 @@ docker run --rm %GPU_FLAG% ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% phase3 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto END
 
@@ -183,6 +194,7 @@ docker run --rm ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% phase4 %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto END
 
@@ -194,6 +206,7 @@ docker run --rm %GPU_FLAG% ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% run-all %1 %2 %3 %4 %5 %6 %7 %8 %9
 goto END
 
@@ -203,6 +216,7 @@ docker run --rm %GPU_FLAG% ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% run-all --test
 goto END
 
@@ -212,6 +226,7 @@ docker run --rm ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% status
 goto END
 
@@ -221,6 +236,7 @@ docker run --rm -it %GPU_FLAG% ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% bash
 goto END
 
@@ -278,6 +294,7 @@ docker run --rm %GPU_FLAG% ^
     -v "%OUTPUT_DIR%:/workspace/data" ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
     %IMAGE% %*
 goto END
 

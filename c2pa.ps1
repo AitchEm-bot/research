@@ -11,7 +11,7 @@ param(
 # Configuration
 $Image = if ($env:C2PA_IMAGE) { $env:C2PA_IMAGE } else { "aitchem037/c2pa-research:latest" }
 $OutputDir = if ($env:C2PA_DATA_DIR) { $env:C2PA_DATA_DIR } else { ".\c2pa-results" }
-$GpuFlag = if ($env:C2PA_GPU) { $env:C2PA_GPU } else { "--gpus all" }
+$ToolsDir = if ($env:C2PA_TOOLS_DIR) { $env:C2PA_TOOLS_DIR } else { ".\tools" }
 
 # Create output directory
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -19,6 +19,16 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 # Create model cache volumes
 docker volume create huggingface-cache 2>$null | Out-Null
 docker volume create torch-cache 2>$null | Out-Null
+
+# Check if GPU is available
+function Test-GpuAvailable {
+    try {
+        $result = docker run --rm --gpus all hello-world 2>&1
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
 
 # Helper function to run Docker
 function Invoke-DockerCommand {
@@ -29,16 +39,28 @@ function Invoke-DockerCommand {
 
     $dockerArgs = @("run", "--rm")
 
+    # Check GPU availability
     if ($UseGpu) {
-        $dockerArgs += $GpuFlag.Split()
+        if (Test-GpuAvailable) {
+            $dockerArgs += @("--gpus", "all")
+        } else {
+            Write-Host "[!] GPU not available, running in CPU mode"
+        }
     }
 
     $dockerArgs += @(
         "-v", "$($OutputDir):/workspace/data",
         "-v", "huggingface-cache:/workspace/.cache/huggingface",
-        "-v", "torch-cache:/workspace/.cache/torch",
-        $Image
-    ) + $Args
+        "-v", "torch-cache:/workspace/.cache/torch"
+    )
+
+    # Mount tools directory if it exists
+    if (Test-Path $ToolsDir) {
+        $dockerArgs += @("-v", "$($ToolsDir):/workspace/tools")
+    }
+
+    $dockerArgs += $Image
+    $dockerArgs += $Args
 
     & docker @dockerArgs
 }
