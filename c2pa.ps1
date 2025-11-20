@@ -23,8 +23,8 @@ docker volume create torch-cache 2>$null | Out-Null
 # Check if GPU is available
 function Test-GpuAvailable {
     try {
-        $result = docker run --rm --gpus all hello-world 2>&1
-        return $LASTEXITCODE -eq 0
+        $dockerInfo = docker info 2>&1
+        return $dockerInfo -match "nvidia"
     } catch {
         return $false
     }

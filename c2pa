@@ -18,7 +18,8 @@ docker volume create torch-cache >/dev/null 2>&1 || true
 
 # Check if GPU is available
 check_gpu() {
-    if docker run --rm --gpus all hello-world >/dev/null 2>&1; then
+    # Check if nvidia runtime is configured in Docker
+    if docker info 2>/dev/null | grep -qi "nvidia"; then
         return 0
     else
         return 1
