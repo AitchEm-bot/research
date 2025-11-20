@@ -61,6 +61,9 @@ fi
 if command -v c2patool &> /dev/null; then
     C2PA_VERSION=$(c2patool --version 2>&1 | head -1)
     print_status "c2patool installed: $C2PA_VERSION"
+elif [ -f "/workspace/tools/c2patool/c2patool_linux" ]; then
+    C2PA_VERSION=$(/workspace/tools/c2patool/c2patool_linux --version 2>&1 | head -1)
+    print_status "c2patool installed: $C2PA_VERSION"
 elif [ -f "/usr/local/bin/c2patool" ]; then
     C2PA_VERSION=$(/usr/local/bin/c2patool --version 2>&1 | head -1)
     print_status "c2patool installed: $C2PA_VERSION"
