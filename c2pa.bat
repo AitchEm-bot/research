@@ -6,7 +6,7 @@ setlocal enabledelayedexpansion
 
 REM Configuration
 if "%C2PA_IMAGE%"=="" (
-    set IMAGE=c2pa-research:latest
+    set IMAGE=aitchem037/c2pa-research:latest
 ) else (
     set IMAGE=%C2PA_IMAGE%
 )

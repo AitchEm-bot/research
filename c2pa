@@ -5,7 +5,7 @@
 set -e
 
 # Configuration
-IMAGE="${C2PA_IMAGE:-c2pa-research:latest}"
+IMAGE="${C2PA_IMAGE:-aitchem037/c2pa-research:latest}"
 OUTPUT_DIR="${C2PA_DATA_DIR:-./c2pa-results}"
 GPU_FLAG="${C2PA_GPU:---gpus all}"
 

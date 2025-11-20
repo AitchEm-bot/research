@@ -9,7 +9,7 @@ param(
 )
 
 # Configuration
-$Image = if ($env:C2PA_IMAGE) { $env:C2PA_IMAGE } else { "c2pa-research:latest" }
+$Image = if ($env:C2PA_IMAGE) { $env:C2PA_IMAGE } else { "aitchem037/c2pa-research:latest" }
 $OutputDir = if ($env:C2PA_DATA_DIR) { $env:C2PA_DATA_DIR } else { ".\c2pa-results" }
 $GpuFlag = if ($env:C2PA_GPU) { $env:C2PA_GPU } else { "--gpus all" }
 
