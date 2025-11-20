@@ -64,6 +64,7 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt \
 COPY tools/ /workspace/tools/
 RUN chmod +x /workspace/tools/c2patool/c2patool_linux && \
     /workspace/tools/c2patool/c2patool_linux --version
+ENV C2PATOOL_PATH=/workspace/tools/c2patool/c2patool_linux
 
 # --------------------------
 # Copy project files
@@ -135,7 +136,6 @@ ENV PYTHONPATH=/workspace
 # Data paths
 ENV PROJECT_ROOT=/workspace
 ENV DATA_DIR=/workspace/data
-ENV C2PATOOL_PATH=/usr/local/bin/c2patool
 
 # Disable Python buffering for better logging
 ENV PYTHONUNBUFFERED=1
