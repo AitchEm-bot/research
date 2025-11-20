@@ -60,9 +60,10 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt \
 # --------------------------
 # C2PA Tool
 # --------------------------
-# Note: c2patool runs on host system, mounted via -v flag
-# Download from: https://github.com/contentauth/c2pa-rs/releases
-# Place in: tools/c2patool/ directory
+# Copy tools directory (contains Linux c2patool binary and certificates)
+COPY tools/ /workspace/tools/
+RUN chmod +x /workspace/tools/c2patool/c2patool_linux && \
+    /workspace/tools/c2patool/c2patool_linux --version
 
 # --------------------------
 # Copy project files

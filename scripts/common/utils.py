@@ -84,8 +84,8 @@ else:
     # Check multiple locations in order of preference
     possible_paths = [
         PROJECT_ROOT / "tools/c2patool/c2patool/c2patool.exe",  # Windows local
-        PROJECT_ROOT / "tools/c2patool/c2patool",               # Linux local (mounted in Docker)
-        PROJECT_ROOT / "tools/c2patool",                        # Direct binary
+        PROJECT_ROOT / "tools/c2patool/c2patool_linux",         # Linux binary in Docker
+        PROJECT_ROOT / "tools/c2patool/c2patool",               # Linux local (alternative)
         Path("/usr/local/bin/c2patool"),                        # System install
     ]
     C2PATOOL_LOCAL = None

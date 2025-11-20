@@ -189,6 +189,21 @@ case "$1" in
         run_docker false status
         ;;
 
+    "setup")
+        echo "[Setup: Extracting c2patool to local tools directory]"
+        mkdir -p "$TOOLS_DIR/c2patool"
+        docker run --rm -v "$TOOLS_DIR:/host-tools" "$IMAGE" \
+            cp -r /workspace/tools/c2patool/. /host-tools/c2patool/
+        if [ -f "$TOOLS_DIR/c2patool/c2patool" ]; then
+            chmod +x "$TOOLS_DIR/c2patool/c2patool"
+            echo "[✓] c2patool extracted to $TOOLS_DIR/c2patool/"
+            "$TOOLS_DIR/c2patool/c2patool" --version
+        else
+            echo "[✗] Failed to extract c2patool"
+            exit 1
+        fi
+        ;;
+
     "shell")
         echo "[Interactive Shell]"
         docker run --rm -it $GPU_FLAG \
@@ -223,6 +238,7 @@ FULL PIPELINE:
   c2pa test                        Quick test with minimal assets
 
 UTILITIES:
+  c2pa setup                       Extract c2patool to local tools directory
   c2pa status                      Check pipeline status
   c2pa shell                       Open interactive shell in container
   c2pa --help                      Show this help message
