@@ -49,10 +49,17 @@ function Invoke-DockerCommand {
     }
 
     $dockerArgs += @(
-        "-v", "$($OutputDir):/workspace/data",
-        "-v", "huggingface-cache:/workspace/.cache/huggingface",
-        "-v", "torch-cache:/workspace/.cache/torch"
+        "-v", "$($OutputDir):/workspace/data"
     )
+
+    # Use custom HF cache directory if set, otherwise use named volume
+    if ($env:HF_CACHE_DIR) {
+        $dockerArgs += @("-v", "$($env:HF_CACHE_DIR):/workspace/.cache/huggingface")
+    } else {
+        $dockerArgs += @("-v", "huggingface-cache:/workspace/.cache/huggingface")
+    }
+
+    $dockerArgs += @("-v", "torch-cache:/workspace/.cache/torch")
 
     $dockerArgs += $Image
     $dockerArgs += $CommandArgs

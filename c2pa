@@ -33,7 +33,14 @@ run_docker() {
 
     # Build volume mounts
     local volumes="-v $OUTPUT_DIR:/workspace/data"
-    volumes="$volumes -v huggingface-cache:/workspace/.cache/huggingface"
+
+    # Use custom HF cache directory if set, otherwise use named volume
+    if [ -n "$HF_CACHE_DIR" ]; then
+        volumes="$volumes -v $HF_CACHE_DIR:/workspace/.cache/huggingface"
+    else
+        volumes="$volumes -v huggingface-cache:/workspace/.cache/huggingface"
+    fi
+
     volumes="$volumes -v torch-cache:/workspace/.cache/torch"
 
     # Mount tools directory if it exists
