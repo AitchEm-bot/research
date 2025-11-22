@@ -268,11 +268,14 @@ def phase0(
     console.print("+================================================================+")
     console.print("")
 
-    # Determine counts
+    # Determine counts - if one type is specified, only generate that type
     if skip_images:
         image_count = 0
     elif images is not None:
         image_count = images
+    elif videos is not None:
+        # If only videos specified, skip images
+        image_count = 0
     else:
         image_count = 10 if test else 100
 
@@ -280,6 +283,9 @@ def phase0(
         video_count = 0
     elif videos is not None:
         video_count = videos
+    elif images is not None:
+        # If only images specified, skip videos
+        video_count = 0
     else:
         video_count = 2 if test else 30
 
@@ -607,7 +613,9 @@ def run_all(
 
         # Call phase function with appropriate arguments
         if phase_func == phase4:
-            phase_func(test=test, force=force, publication=publication)
+            # Must explicitly pass skip_viz=False to avoid OptionInfo object issue
+            # Default to publication=True for run_all to generate all figures
+            phase_func(test=test, force=force, skip_viz=False, publication=True)
         else:
             phase_func(test=test, force=force)
 
