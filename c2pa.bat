@@ -133,7 +133,7 @@ docker run --rm ^
     -v huggingface-cache:/workspace/.cache/huggingface ^
     -v torch-cache:/workspace/.cache/torch ^
     -v "%TOOLS_DIR%:/workspace/tools" ^
-    %IMAGE% phase2_5 %1 %2 %3 %4 %5 %6 %7 %8 %9
+    %IMAGE% phase2-5 %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 REM Generate instructions
 echo. > "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"

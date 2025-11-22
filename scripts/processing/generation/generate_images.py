@@ -107,9 +107,17 @@ def generate_images(output_dir: Path, count: int = 100, seed: int = 42,
     # Load prompts from prompts.txt file
     prompts_file = output_dir / "prompts.txt"
     if not prompts_file.exists():
-        logger.error(f"Prompts file not found: {prompts_file}")
-        logger.error("Please create data/assets/raw_images/prompts.txt with one prompt per line")
-        sys.exit(1)
+        # Try to copy from preset_assets (Docker image bundled prompts)
+        preset_prompts = Path("/workspace/preset_assets/raw_images/prompts.txt")
+        if preset_prompts.exists():
+            import shutil
+            shutil.copy(preset_prompts, prompts_file)
+            logger.info(f"Copied bundled prompts to {prompts_file}")
+        else:
+            logger.error(f"Prompts file not found: {prompts_file}")
+            logger.error("Please create data/assets/raw_images/prompts.txt with one prompt per line")
+            logger.error("(Mounted from your local c2pa-results/assets/raw_images/prompts.txt)")
+            sys.exit(1)
 
     with open(prompts_file, 'r', encoding='utf-8') as f:
         # Read all lines and strip whitespace, skip empty lines
@@ -122,8 +130,11 @@ def generate_images(output_dir: Path, count: int = 100, seed: int = 42,
     logger.info(f"Loaded {len(prompts)} prompts from {prompts_file}")
 
     if len(prompts) < count:
-        logger.warning(f"Only {len(prompts)} prompts available for {count} images")
-        logger.warning("Prompts will be reused cyclically")
+        logger.error(f"Requested {count} images but only {len(prompts)} prompts available in prompts.txt")
+        logger.error(f"Add more prompts to: {prompts_file}")
+        logger.error("(Mounted from your local c2pa-results/assets/raw_images/prompts.txt)")
+        logger.error(f"Each line in the file should contain one prompt. Current file has {len(prompts)} prompts.")
+        sys.exit(1)
 
     # Generate images
     logger.info(f"Generating {count} images at {resolution}×{resolution}...")

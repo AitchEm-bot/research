@@ -138,7 +138,7 @@ case "$1" in
                 create_platform_dirs
 
                 # Run platform upload preparation
-                run_docker false phase2_5 "$@"
+                run_docker false phase2-5 "$@"
 
                 # Generate instructions
                 generate_platform_instructions

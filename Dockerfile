@@ -110,6 +110,9 @@ COPY data/assets/raw_images/img_00[0-9]_seed5[01]*.png /workspace/preset_assets/
 COPY data/assets/raw_images/img_00[0-9]_seed4[2-9]*.json /workspace/preset_assets/raw_images/
 COPY data/assets/raw_images/img_00[0-9]_seed5[01]*.json /workspace/preset_assets/raw_images/
 
+# Copy prompts file for image generation
+COPY data/assets/raw_images/prompts.txt /workspace/preset_assets/raw_images/
+
 # Copy conditioning images for video generation (seeds 100-101)
 COPY data/assets/raw_images_for_videos/vidimg_00[01]*.png /workspace/preset_assets/raw_images_for_videos/
 COPY data/assets/raw_images_for_videos/vidimg_00[01]*.json /workspace/preset_assets/raw_images_for_videos/

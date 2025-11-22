@@ -144,7 +144,7 @@ switch ($Command) {
                 New-PlatformDirectories
 
                 # Run platform upload preparation
-                Invoke-DockerCommand -UseGpu $false -CommandArgs (@("phase2_5") + $Arguments)
+                Invoke-DockerCommand -UseGpu $false -CommandArgs (@("phase2-5") + $Arguments)
 
                 # Generate instructions
                 New-PlatformInstructions
