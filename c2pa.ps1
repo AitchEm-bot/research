@@ -251,14 +251,14 @@ ENVIRONMENT VARIABLES:
 
 OUTPUT STRUCTURE:
   ./c2pa-results/
-  ├── results/csv/                 CSV metrics files
-  │   ├── final_metrics.csv        Main results
-  │   ├── c2pa_validation.csv      C2PA verification
-  │   └── quality_metrics.csv      PSNR/SSIM/VMAF
-  ├── results/analysis_results/
-  │   ├── plots/                   Visualizations
-  │   └── csv/                     Analysis summaries
-  └── results/logs/                Execution logs
+  +-- results/csv/                 CSV metrics files
+      +-- final_metrics.csv        Main results
+      +-- c2pa_validation.csv      C2PA verification
+      +-- quality_metrics.csv      PSNR/SSIM/VMAF
+  +-- results/analysis_results/
+      +-- plots/                   Visualizations
+      +-- csv/                     Analysis summaries
+  +-- results/logs/                Execution logs
 
 For detailed documentation, see README_DOCKER.md
 "@
