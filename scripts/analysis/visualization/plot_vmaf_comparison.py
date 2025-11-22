@@ -66,8 +66,9 @@ def plot_vmaf_stretched_boxplot(df: pd.DataFrame, output_path: Path):
     """
     logger.info(f"Creating VMAF stretched boxplot: {output_path}")
 
-    # Filter to videos only
+    # Filter to videos only and drop NaN VMAF values
     df_videos = df[df['asset_type'] == 'video'].copy()
+    df_videos = df_videos.dropna(subset=['vmaf_stretched'])
 
     if len(df_videos) == 0:
         logger.warning("No video data available for VMAF plotting")
@@ -76,12 +77,12 @@ def plot_vmaf_stretched_boxplot(df: pd.DataFrame, output_path: Path):
     # Create figure
     fig, ax = plt.subplots(figsize=(14, 7))
 
-    # Sort transforms by median VMAF
-    transform_order = df_videos.groupby('transform_type')['vmaf_stretched'].median().sort_values(ascending=False).index
+    # Sort transforms by median VMAF (only includes categories with valid data)
+    transform_order = df_videos.groupby('transform_type')['vmaf_stretched'].median().sort_values(ascending=False).index.tolist()
 
     # Create boxplot
     sns.boxplot(data=df_videos, x='transform_type', y='vmaf_stretched',
-                order=transform_order, palette=COLORS, ax=ax)
+                order=transform_order, ax=ax)
 
     # Rotate x-axis labels
     plt.xticks(rotation=45, ha='right')
@@ -126,8 +127,9 @@ def plot_vmaf_aligned_boxplot(df: pd.DataFrame, output_path: Path):
     """
     logger.info(f"Creating VMAF aligned boxplot: {output_path}")
 
-    # Filter to videos only
+    # Filter to videos only and drop NaN VMAF values
     df_videos = df[df['asset_type'] == 'video'].copy()
+    df_videos = df_videos.dropna(subset=['vmaf_aligned'])
 
     if len(df_videos) == 0:
         logger.warning("No video data available for VMAF plotting")
@@ -136,12 +138,12 @@ def plot_vmaf_aligned_boxplot(df: pd.DataFrame, output_path: Path):
     # Create figure
     fig, ax = plt.subplots(figsize=(14, 7))
 
-    # Sort transforms by median VMAF
-    transform_order = df_videos.groupby('transform_type')['vmaf_aligned'].median().sort_values(ascending=False).index
+    # Sort transforms by median VMAF (only includes categories with valid data)
+    transform_order = df_videos.groupby('transform_type')['vmaf_aligned'].median().sort_values(ascending=False).index.tolist()
 
     # Create boxplot
     sns.boxplot(data=df_videos, x='transform_type', y='vmaf_aligned',
-                order=transform_order, palette=COLORS, ax=ax)
+                order=transform_order, ax=ax)
 
     # Rotate x-axis labels
     plt.xticks(rotation=45, ha='right')
@@ -239,11 +241,12 @@ def plot_vmaf_comparison(df: pd.DataFrame, output_path: Path):
     """
     logger.info(f"Creating VMAF comparison plot: {output_path}")
 
-    # Filter to videos only
+    # Filter to videos only and drop NaN VMAF values
     df_videos = df[df['asset_type'] == 'video'].copy()
+    df_videos = df_videos.dropna(subset=['vmaf_stretched', 'vmaf_aligned'])
 
     if len(df_videos) == 0:
-        logger.warning("No video data available for VMAF plotting")
+        logger.warning("No video data available for VMAF comparison plotting")
         return
 
     # Calculate differences

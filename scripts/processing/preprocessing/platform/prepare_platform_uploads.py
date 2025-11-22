@@ -98,8 +98,8 @@ PLATFORM_CONFIGS = {
     }
 }
 
-# C2PA tool path
-C2PATOOL_PATH = Path("tools/c2patool/c2patool/c2patool.exe")
+# C2PA tool path (use centralized path from utils)
+C2PATOOL_PATH = Path(utils.C2PATOOL_CMD)
 
 
 def check_c2patool() -> bool:

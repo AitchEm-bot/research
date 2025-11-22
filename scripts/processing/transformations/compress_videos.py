@@ -286,13 +286,13 @@ def process_videos(test_mode: bool = False, external_only: bool = False):
 
     # Process each video
     for video_path in tqdm(signed_videos, desc="Processing videos", unit="video"):
-        logger.info(f"Processing: {video_path.name}")
+        logger.debug(f"Processing: {video_path.name}")
 
         # Get video info
         video_info = get_video_info(video_path)
         if video_info:
-            logger.info(f"  Original: {video_info['fps']:.1f}fps, {video_info['codec']}, "
-                        f"{video_info['width']}x{video_info['height']}")
+            logger.debug(f"  Original: {video_info['fps']:.1f}fps, {video_info['codec']}, "
+                         f"{video_info['width']}x{video_info['height']}")
 
         # Apply H.264 compression at various bitrates
         for bitrate in H264_BITRATES:

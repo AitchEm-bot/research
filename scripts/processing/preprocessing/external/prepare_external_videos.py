@@ -34,6 +34,7 @@ import sys
 import subprocess
 import json
 import shutil
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Tuple, Optional, Dict
@@ -53,8 +54,8 @@ RAW_VIDEOS_DIR = Path("data/assets/raw_out_videos")
 OUTPUT_DIR = Path("data/prepared_assets/signed_assets/videos/external")
 SUPPORTED_EXTENSIONS = ['.mp4', '.mov', '.avi']
 
-# C2PA configuration (reused from embed_c2pa_v2.py)
-C2PATOOL_PATH = Path("tools/c2patool/c2patool/c2patool.exe")
+# C2PA configuration (use path from utils which respects C2PATOOL_PATH env var)
+C2PATOOL_PATH = Path(utils.C2PATOOL_CMD)
 C2PATOOL_VERSION_REQUIRED = "0.24.0"
 
 # Manifest template for external videos

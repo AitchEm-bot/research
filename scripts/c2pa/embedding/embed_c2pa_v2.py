@@ -28,6 +28,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from tqdm import tqdm
+
 # Import shared utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from common import utils
@@ -142,7 +144,7 @@ def sign_asset_with_c2patool(asset_path: Path, output_path: Path,
         with open(manifest_path, 'w') as f:
             json.dump(manifest_json, f, indent=2)
 
-        logger.info(f"Signing asset: {asset_path.name}")
+        logger.debug(f"Signing asset: {asset_path.name}")
 
         # Call c2patool to sign the asset
         cmd = [
@@ -170,14 +172,14 @@ def sign_asset_with_c2patool(asset_path: Path, output_path: Path,
         try:
             output_json = json.loads(result.stdout)
             if "active_manifest" in output_json:
-                logger.info(f"SUCCESS: Successfully signed: {output_path.name}")
+                logger.debug(f"SUCCESS: Successfully signed: {output_path.name}")
 
                 # Log validation status
                 validation_status = output_json.get("validation_status", [])
                 if validation_status:
                     for status in validation_status:
                         if "untrusted" in status.get("code", ""):
-                            logger.info(f"   ℹ️  Expected: {status['explanation']} (test certificate)")
+                            logger.debug(f"   ℹ️  Expected: {status['explanation']} (test certificate)")
                         else:
                             logger.warning(f"   ⚠️  {status.get('explanation', 'Unknown validation issue')}")
 
@@ -295,19 +297,19 @@ def verify_signed_asset(asset_path: Path) -> Dict[str, Any]:
 
         # Log appropriately based on research focus
         if trust_issues and not integrity_issues:
-            logger.info(f"📝 Manifest integrity verified: {asset_path.name}")
+            logger.debug(f"📝 Manifest integrity verified: {asset_path.name}")
             logger.debug(f"   Trust issues (expected with test cert): {len(trust_issues)}")
         elif integrity_verified:
-            logger.info(f"SUCCESS: Manifest fully verified: {asset_path.name}")
+            logger.debug(f"SUCCESS: Manifest fully verified: {asset_path.name}")
         else:
             logger.warning(f"⚠️ Manifest integrity issues found: {asset_path.name}")
             logger.warning(f"   Issues: {integrity_issues}")
 
-        logger.info(f"   Claim Generator: {result_dict['claim_generator']}")
-        logger.info(f"   Integrity: {'PASS' if integrity_verified else 'FAIL'}")
-        logger.info(f"   Signature Valid: {'YES' if signature_valid else 'NO'}")
-        logger.info(f"   Hash Match: {'YES' if hash_match else 'NO'}")
-        logger.info(f"   Trust: {'PASS' if trust_verified else 'SKIP (test cert)'}")
+        logger.debug(f"   Claim Generator: {result_dict['claim_generator']}")
+        logger.debug(f"   Integrity: {'PASS' if integrity_verified else 'FAIL'}")
+        logger.debug(f"   Signature Valid: {'YES' if signature_valid else 'NO'}")
+        logger.debug(f"   Hash Match: {'YES' if hash_match else 'NO'}")
+        logger.debug(f"   Trust: {'PASS' if trust_verified else 'SKIP (test cert)'}")
 
         return result_dict
 
@@ -355,8 +357,8 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
         logger.info(f"Processing images from {images_dir}")
         image_files = sorted(images_dir.glob("*.png")) + sorted(images_dir.glob("*.jpg"))
 
-        for img_path in image_files:
-            logger.info(f"Processing image: {img_path.name}")
+        for img_path in tqdm(image_files, desc="Signing images", unit="image"):
+            logger.debug(f"Processing image: {img_path.name}")
 
             # Extract seed from filename if present
             seed = None
@@ -393,8 +395,8 @@ def process_assets(images_dir: Path, videos_dir: Path, output_dir: Path,
         logger.info(f"Processing videos from {videos_dir}")
         video_files = sorted(videos_dir.glob("*.mp4")) + sorted(videos_dir.glob("*.avi"))
 
-        for vid_path in video_files:
-            logger.info(f"Processing video: {vid_path.name}")
+        for vid_path in tqdm(video_files, desc="Signing videos", unit="video"):
+            logger.debug(f"Processing video: {vid_path.name}")
 
             # Extract seed from filename if present
             seed = None

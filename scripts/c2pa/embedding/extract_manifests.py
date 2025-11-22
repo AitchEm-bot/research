@@ -25,6 +25,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tqdm import tqdm
+
 # Import shared utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from common import utils
@@ -33,8 +35,8 @@ from common import utils
 logger = utils.setup_logging()
 utils.log_environment_info()
 
-# Path to c2patool executable
-C2PATOOL_PATH = Path("tools/c2patool/c2patool/c2patool.exe")
+# Path to c2patool executable (use centralized path from utils)
+C2PATOOL_PATH = Path(utils.C2PATOOL_CMD)
 
 # Base directories
 SIGNED_ASSETS_BASE = Path("data/prepared_assets/signed_assets")
@@ -53,7 +55,7 @@ def extract_manifest(asset_path: Path, output_path: Path) -> bool:
         True if successful, False otherwise
     """
     try:
-        logger.info(f"Extracting manifest from: {asset_path.name}")
+        logger.debug(f"Extracting manifest from: {asset_path.name}")
 
         # Call c2patool to read the manifest
         cmd = [str(C2PATOOL_PATH), str(asset_path)]
@@ -78,7 +80,7 @@ def extract_manifest(asset_path: Path, output_path: Path) -> bool:
             with open(output_path, 'w') as f:
                 json.dump(manifest_data, f, indent=2)
 
-            logger.info(f"SUCCESS: Saved manifest: {output_path.name}")
+            logger.debug(f"SUCCESS: Saved manifest: {output_path.name}")
 
             # Log basic info about the manifest
             active_manifest = manifest_data.get("active_manifest", "N/A")
@@ -170,7 +172,7 @@ def extract_all_manifests():
         logger.info("-" * 60)
 
         # Extract manifests
-        for asset_path in signed_assets:
+        for asset_path in tqdm(signed_assets, desc=f"Extracting {category}", unit="asset"):
             # Generate output filename (replace _signed.ext with _manifest.json)
             output_filename = asset_path.stem.replace("_signed", "_manifest") + ".json"
             output_path = output_dir / output_filename

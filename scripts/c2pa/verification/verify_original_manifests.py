@@ -51,12 +51,11 @@ utils.log_environment_info()
 
 # Configuration
 SIGNED_ASSETS_BASE = Path("data/prepared_assets/signed_assets")
-OUTPUT_CSV = Path("data/results/c2pa_validation_baseline.csv")
+OUTPUT_CSV = utils.DIRS['results_csv'] / "c2pa_validation_baseline.csv"
 OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
 
-# c2patool path (try local installation first, then PATH)
-C2PATOOL_LOCAL = Path("tools/c2patool/c2patool/c2patool.exe")
-C2PATOOL_CMD = str(C2PATOOL_LOCAL) if C2PATOOL_LOCAL.exists() else "c2patool"
+# c2patool path (use centralized path from utils)
+C2PATOOL_CMD = utils.C2PATOOL_CMD
 
 # CSV Column headers (matching verify_c2pa.py schema for comparison)
 CSV_HEADERS = [

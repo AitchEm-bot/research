@@ -221,44 +221,51 @@ C2PA Robustness Research Pipeline - Docker Wrapper
 USAGE:
   c2pa <command> [options]
 
-PHASE-BY-PHASE EXECUTION:
-  c2pa phase 0 [options]           Generate AI assets
-    --images N                     Number of images to generate
-    --videos N                     Number of videos to generate
-    --test                         Generate test counts (10 images, 2 videos)
+COMMANDS:
+  phase 0         Generate AI assets (images with SD1.4, videos with SVD) - requires GPU
+  phase 1         Embed C2PA manifests into assets using c2patool
+  phase 2         Apply transformations (JPEG/PNG compression, H.264/H.265, resize, crop, rotate, trim)
+  phase 2-5       Prepare assets for platform testing (optional, for social media round-trip tests)
+  phase 3         Verify C2PA manifests and calculate quality metrics (PSNR, SSIM, VMAF)
+  phase 4         Data analysis and visualization (exploratory plots or publication figures)
+  run             Run complete pipeline (phases 1-4 sequentially)
+  test            Quick test run with minimal assets
+  status          Check pipeline execution status
+  setup           Extract c2patool to local tools directory
+  shell           Open interactive shell in container
 
-  c2pa phase 1 [options]           Embed C2PA manifests
-  c2pa phase 2 [options]           Apply transformations
-  c2pa phase 2.5 [options]         Setup platform testing (optional)
-  c2pa phase 3 [options]           Verify C2PA & calculate metrics
-  c2pa phase 4 [options]           Generate analysis & visualizations
-
-FULL PIPELINE:
-  c2pa run [options]               Run complete pipeline (skips 2.5)
-  c2pa test                        Quick test with minimal assets
-
-UTILITIES:
-  c2pa setup                       Extract c2patool to local tools directory
-  c2pa status                      Check pipeline status
-  c2pa shell                       Open interactive shell in container
-  c2pa --help                      Show this help message
+OPTIONS:
+  --test              Run in test mode (fewer assets, faster execution)
+  --force             Force re-run even if checkpoint exists
+  --publication       Generate F1-F7 publication figures (phase 4 and run)
+  --skip-viz          Skip visualization generation (phase 4 only)
+  --images N          Number of images to generate (phase 0 only)
+  --videos N          Number of videos to generate (phase 0 only)
+  --resume-from N     Resume from phase N, where N is 1-4 (run only)
 
 EXAMPLES:
   c2pa phase 0 --images 50 --videos 10    # Generate 50 images + 10 videos
-  c2pa phase 0 --test                     # Generate test set
-  c2pa run                                # Full pipeline with presets
-  c2pa phase 2 --test                     # Test transformations only
+  c2pa phase 1                            # Sign assets with C2PA manifests
+  c2pa phase 4 --publication              # Generate F1-F7 publication figures
+  c2pa run --test                         # Quick test of full pipeline
+  c2pa run --publication                  # Full run with publication figures
+  c2pa run --resume-from 3                # Resume from phase 3
 
 ENVIRONMENT VARIABLES:
-  C2PA_IMAGE                       Docker image name (default: c2pa-research:latest)
-  C2PA_DATA_DIR                    Output directory (default: ./c2pa-results)
-  C2PA_GPU                         GPU flags (default: --gpus all)
+  C2PA_IMAGE      Docker image (default: aitchem037/c2pa-research:latest)
+  C2PA_DATA_DIR   Output directory (default: ./c2pa-results)
+  C2PA_TOOLS_DIR  Tools directory (default: ./tools)
 
-OUTPUT:
-  All results saved to: ./c2pa-results/
-  - csv/final_metrics.csv          Main results
-  - plots/                         Visualizations
-  - logs/                          Execution logs
+OUTPUT STRUCTURE:
+  ./c2pa-results/
+  ├── results/csv/                 CSV metrics files
+  │   ├── final_metrics.csv        Main results
+  │   ├── c2pa_validation.csv      C2PA verification
+  │   └── quality_metrics.csv      PSNR/SSIM/VMAF
+  ├── results/analysis_results/
+  │   ├── plots/                   Visualizations
+  │   └── csv/                     Analysis summaries
+  └── results/logs/                Execution logs
 
 For detailed documentation, see README_DOCKER.md
 HELP

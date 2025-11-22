@@ -53,7 +53,7 @@ SIGNED_VIDEOS_DIRS = [
     utils.DIRS['signed_videos_internal'],
     utils.DIRS['signed_videos_external']
 ]
-OUTPUT_CSV = utils.DIRS['results'] / "quality_metrics.csv"
+OUTPUT_CSV = utils.DIRS['results_csv'] / "quality_metrics.csv"
 
 # Use shared lossless transforms definition
 LOSSLESS_TRANSFORMS = utils.LOSSLESS_TRANSFORMS

@@ -63,8 +63,13 @@ def plot_psnr_boxplot(df: pd.DataFrame, output_path: Path):
     """
     logger.info(f"Creating PSNR boxplot: {output_path}")
 
-    # Filter to images only
+    # Filter to images only and drop NaN values
     df_images = df[df['asset_type'] == 'image'].copy()
+    df_images = df_images.dropna(subset=['psnr'])
+
+    if len(df_images) == 0:
+        logger.warning("No image data available for PSNR plotting")
+        return
 
     # Handle infinite values (lossless transforms)
     df_images['psnr_plot'] = df_images['psnr'].replace([np.inf], 100)  # Cap at 100 for visualization
@@ -77,12 +82,12 @@ def plot_psnr_boxplot(df: pd.DataFrame, output_path: Path):
     # Create figure
     fig, ax = plt.subplots(figsize=(14, 7))
 
-    # Sort transforms by median PSNR
-    transform_order = df_images.groupby('transform_type')['psnr_plot'].median().sort_values(ascending=False).index
+    # Sort transforms by median PSNR (only includes categories with valid data)
+    transform_order = df_images.groupby('transform_type')['psnr_plot'].median().sort_values(ascending=False).index.tolist()
 
     # Create boxplot
     sns.boxplot(data=df_images, x='transform_type', y='psnr_plot',
-                order=transform_order, palette=COLORS, ax=ax)
+                order=transform_order, ax=ax)
 
     # Rotate x-axis labels
     plt.xticks(rotation=45, ha='right')
@@ -132,18 +137,23 @@ def plot_ssim_boxplot(df: pd.DataFrame, output_path: Path):
     """
     logger.info(f"Creating SSIM boxplot: {output_path}")
 
-    # Filter to images only
+    # Filter to images only and drop NaN values
     df_images = df[df['asset_type'] == 'image'].copy()
+    df_images = df_images.dropna(subset=['ssim'])
+
+    if len(df_images) == 0:
+        logger.warning("No image data available for SSIM plotting")
+        return
 
     # Create figure
     fig, ax = plt.subplots(figsize=(14, 7))
 
-    # Sort transforms by median SSIM
-    transform_order = df_images.groupby('transform_type')['ssim'].median().sort_values(ascending=False).index
+    # Sort transforms by median SSIM (only includes categories with valid data)
+    transform_order = df_images.groupby('transform_type')['ssim'].median().sort_values(ascending=False).index.tolist()
 
     # Create boxplot
     sns.boxplot(data=df_images, x='transform_type', y='ssim',
-                order=transform_order, palette=COLORS, ax=ax)
+                order=transform_order, ax=ax)
 
     # Rotate x-axis labels
     plt.xticks(rotation=45, ha='right')

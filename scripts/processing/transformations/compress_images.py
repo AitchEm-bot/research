@@ -171,7 +171,7 @@ def process_images(test_mode: bool = False):
 
     # Process each image
     for img_path in tqdm(signed_images, desc="Processing images", unit="image"):
-        logger.info(f"Processing: {img_path.name}")
+        logger.debug(f"Processing: {img_path.name}")
 
         # Apply JPEG compression at various quality levels
         for quality in JPEG_QUALITIES:

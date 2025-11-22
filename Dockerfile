@@ -131,7 +131,7 @@ ENV TORCH_HOME=/workspace/.cache/torch
 ENV TRANSFORMERS_CACHE=/workspace/.cache/huggingface
 
 # Python path
-ENV PYTHONPATH=/workspace
+ENV PYTHONPATH=/workspace:/workspace/scripts
 
 # Data paths
 ENV PROJECT_ROOT=/workspace

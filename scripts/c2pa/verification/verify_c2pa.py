@@ -58,7 +58,7 @@ utils.log_environment_info()
 
 # Configuration - using shared constants
 TRANSFORMED_BASE_DIR = utils.DIRS['transformed']
-OUTPUT_CSV = utils.DIRS['results'] / "c2pa_validation.csv"
+OUTPUT_CSV = utils.DIRS['results_csv'] / "c2pa_validation.csv"
 C2PATOOL_CMD = utils.C2PATOOL_CMD
 
 # Use shared CSV headers
