@@ -58,8 +58,8 @@ create_platform_dirs() {
     local platforms=("instagram" "twitter" "facebook" "youtube" "tiktok" "whatsapp")
 
     for platform in "${platforms[@]}"; do
-        mkdir -p "$OUTPUT_DIR/platform_tests/$platform/uploads"
-        mkdir -p "$OUTPUT_DIR/platform_tests/$platform/returned"
+        mkdir -p "$OUTPUT_DIR/prepared_assets/platform_tests/$platform/uploads"
+        mkdir -p "$OUTPUT_DIR/prepared_assets/platform_tests/$platform/returned"
     done
 }
 
@@ -73,7 +73,7 @@ PLATFORM TESTING INSTRUCTIONS
 Assets have been distributed to platform folders.
 
 WORKFLOW:
-1. Navigate to: c2pa-results/platform_tests/
+1. Navigate to: c2pa-results/prepared_assets/platform_tests/
 2. For each platform folder:
    a. Find assets in the 'uploads/' subfolder
    b. Upload these assets to the respective platform

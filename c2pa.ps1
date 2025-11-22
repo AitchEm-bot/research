@@ -65,8 +65,8 @@ function New-PlatformDirectories {
     $platforms = @("instagram", "twitter", "facebook", "youtube", "tiktok", "whatsapp")
 
     foreach ($platform in $platforms) {
-        New-Item -ItemType Directory -Force -Path "$OutputDir\platform_tests\$platform\uploads" | Out-Null
-        New-Item -ItemType Directory -Force -Path "$OutputDir\platform_tests\$platform\returned" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$OutputDir\prepared_assets\platform_tests\$platform\uploads" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$OutputDir\prepared_assets\platform_tests\$platform\returned" | Out-Null
     }
 }
 
@@ -80,7 +80,7 @@ PLATFORM TESTING INSTRUCTIONS
 Assets have been distributed to platform folders.
 
 WORKFLOW:
-1. Navigate to: c2pa-results\platform_tests\
+1. Navigate to: c2pa-results\prepared_assets\platform_tests\
 2. For each platform folder:
    a. Find assets in the 'uploads\' subfolder
    b. Upload these assets to the respective platform

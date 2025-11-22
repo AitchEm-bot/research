@@ -122,8 +122,8 @@ echo Creating platform test directories...
 
 REM Create platform directories
 for %%p in (instagram twitter facebook youtube tiktok whatsapp) do (
-    if not exist "%OUTPUT_DIR%\platform_tests\%%p\uploads" mkdir "%OUTPUT_DIR%\platform_tests\%%p\uploads"
-    if not exist "%OUTPUT_DIR%\platform_tests\%%p\returned" mkdir "%OUTPUT_DIR%\platform_tests\%%p\returned"
+    if not exist "%OUTPUT_DIR%\prepared_assets\platform_tests\%%p\uploads" mkdir "%OUTPUT_DIR%\prepared_assets\platform_tests\%%p\uploads"
+    if not exist "%OUTPUT_DIR%\prepared_assets\platform_tests\%%p\returned" mkdir "%OUTPUT_DIR%\prepared_assets\platform_tests\%%p\returned"
 )
 
 REM Run platform upload preparation
@@ -145,7 +145,7 @@ echo.>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo Assets have been distributed to platform folders.>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo.>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo WORKFLOW:>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
-echo 1. Navigate to: c2pa-results\platform_tests\>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
+echo 1. Navigate to: c2pa-results\prepared_assets\platform_tests\>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo 2. For each platform folder:>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo    a. Find assets in the 'uploads\' subfolder>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo    b. Upload these assets to the respective platform>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
