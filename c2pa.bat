@@ -247,43 +247,50 @@ echo.
 echo USAGE:
 echo   c2pa ^<command^> [options]
 echo.
-echo PHASE-BY-PHASE EXECUTION:
-echo   c2pa phase 0 [options]           Generate AI assets
-echo     --images N                     Number of images to generate
-echo     --videos N                     Number of videos to generate
-echo     --test                         Generate test counts (10 images, 2 videos)
+echo COMMANDS:
+echo   phase 0         Generate AI assets (images with SD1.4, videos with SVD) - requires GPU
+echo   phase 1         Embed C2PA manifests into assets using c2patool
+echo   phase 2         Apply transformations (JPEG/PNG compression, H.264/H.265, resize, crop, rotate, trim)
+echo   phase 2.5       Prepare assets for platform testing (optional, for social media round-trip tests)
+echo   phase 3         Verify C2PA manifests and calculate quality metrics (PSNR, SSIM, VMAF)
+echo   phase 4         Data analysis and visualization (exploratory plots or publication figures)
+echo   run             Run complete pipeline (phases 1-4 sequentially)
+echo   test            Quick test run with minimal assets
+echo   status          Check pipeline execution status
+echo   shell           Open interactive shell in container
 echo.
-echo   c2pa phase 1 [options]           Embed C2PA manifests
-echo   c2pa phase 2 [options]           Apply transformations
-echo   c2pa phase 2.5 [options]         Setup platform testing (optional)
-echo   c2pa phase 3 [options]           Verify C2PA ^& calculate metrics
-echo   c2pa phase 4 [options]           Generate analysis ^& visualizations
-echo.
-echo FULL PIPELINE:
-echo   c2pa run [options]               Run complete pipeline (skips 2.5)
-echo   c2pa test                        Quick test with minimal assets
-echo.
-echo UTILITIES:
-echo   c2pa status                      Check pipeline status
-echo   c2pa shell                       Open interactive shell in container
-echo   c2pa --help                      Show this help message
+echo OPTIONS:
+echo   --test              Run in test mode (fewer assets, faster execution)
+echo   --force             Force re-run even if checkpoint exists
+echo   --publication       Generate F1-F7 publication figures (phase 4 and run)
+echo   --skip-viz          Skip visualization generation (phase 4 only)
+echo   --images N          Number of images to generate (phase 0 only)
+echo   --videos N          Number of videos to generate (phase 0 only)
+echo   --resume-from N     Resume from phase N, where N is 1-4 (run only)
 echo.
 echo EXAMPLES:
 echo   c2pa phase 0 --images 50 --videos 10    # Generate 50 images + 10 videos
-echo   c2pa phase 0 --test                     # Generate test set
-echo   c2pa run                                # Full pipeline with presets
-echo   c2pa phase 2 --test                     # Test transformations only
+echo   c2pa phase 1                            # Sign assets with C2PA manifests
+echo   c2pa phase 4 --publication              # Generate F1-F7 publication figures
+echo   c2pa run --test                         # Quick test of full pipeline
+echo   c2pa run --publication                  # Full run with publication figures
+echo   c2pa run --resume-from 3                # Resume from phase 3
 echo.
 echo ENVIRONMENT VARIABLES:
-echo   C2PA_IMAGE                       Docker image name (default: c2pa-research:latest)
-echo   C2PA_DATA_DIR                    Output directory (default: .\c2pa-results)
-echo   C2PA_GPU                         GPU flags (default: --gpus all)
+echo   C2PA_IMAGE      Docker image (default: aitchem037/c2pa-research:latest)
+echo   C2PA_DATA_DIR   Output directory (default: .\c2pa-results)
+echo   C2PA_TOOLS_DIR  Tools directory (default: .\tools)
 echo.
-echo OUTPUT:
-echo   All results saved to: .\c2pa-results\
-echo   - csv\final_metrics.csv          Main results
-echo   - plots\                         Visualizations
-echo   - logs\                          Execution logs
+echo OUTPUT STRUCTURE:
+echo   .\c2pa-results\
+echo   +-- results\csv\                 CSV metrics files
+echo       +-- final_metrics.csv        Main results
+echo       +-- c2pa_validation.csv      C2PA verification
+echo       +-- quality_metrics.csv      PSNR/SSIM/VMAF
+echo   +-- results\analysis_results\
+echo       +-- plots\                   Visualizations
+echo       +-- csv\                     Analysis summaries
+echo   +-- results\logs\                Execution logs
 echo.
 echo For detailed documentation, see README_DOCKER.md
 goto END
