@@ -8,9 +8,9 @@ import csv
 from pathlib import Path
 from datetime import datetime
 
-# Base directories
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-PLATFORM_TESTS_BASE = PROJECT_ROOT / "data" / "platform_tests"
+# Base directories - script is in scripts/processing/preprocessing/platform/
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+PLATFORM_TESTS_BASE = PROJECT_ROOT / "data" / "prepared_assets" / "platform_tests"
 
 # Current timestamp for all renames
 TIMESTAMP = datetime.now().strftime("%Y%m%d-%H%M%S")

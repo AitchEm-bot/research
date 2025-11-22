@@ -207,7 +207,14 @@ switch ($Command) {
 
     "shell" {
         Write-Host "[Interactive Shell]" -ForegroundColor Yellow
-        $shellArgs = @("run", "--rm", "-it") + $GpuFlag.Split() + @(
+        $shellArgs = @("run", "--rm", "-it")
+
+        # Add GPU support if available
+        if (Test-GpuAvailable) {
+            $shellArgs += @("--gpus", "all")
+        }
+
+        $shellArgs += @(
             "-v", "$($OutputDir):/workspace/data",
             "-v", "huggingface-cache:/workspace/.cache/huggingface",
             "-v", "torch-cache:/workspace/.cache/torch",
