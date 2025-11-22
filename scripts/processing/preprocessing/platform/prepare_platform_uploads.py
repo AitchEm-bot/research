@@ -454,15 +454,9 @@ def auto_sample_uploads() -> bool:
     """
     Automatically sample and prepare uploads for all platforms.
 
-    Distribution:
-    - Instagram: 25 images + 10 videos
-    - Twitter: 25 images + 10 videos
-    - Facebook: 25 images + 10 videos
-    - WhatsApp: 25 images + 10 videos
-    - YouTube Shorts: 0 images + 10 videos
-    - TikTok: 0 images + 10 videos
-
-    Total: 100 images, 60 videos
+    Distribution is calculated dynamically based on available assets:
+    - Images distributed evenly across 4 platforms (Instagram, Twitter, Facebook, WhatsApp)
+    - Videos distributed evenly across 6 platforms (all)
 
     Returns:
         Success status
@@ -473,13 +467,11 @@ def auto_sample_uploads() -> bool:
     print("\n" + "="*60)
     print("AUTO-SAMPLING MODE")
     print("="*60)
-    print("This will randomly sample assets for all platforms:")
-    print("  - 100 images total (25 per image-supporting platform)")
-    print("  - 60 videos total (10 per platform)")
+    print("This will randomly sample assets for all platforms.")
     print("\nSources:")
     print("  - Images: data/prepared_assets/signed_assets/images/*_signed.png (original signed)")
     print("  - Videos: data/prepared_assets/signed_assets/videos/external/*_signed.mp4 (all external)")
-    print("\n" + "="*60)
+    print("="*60)
     print("\nProceeding with auto-sampling...")
 
     # Find original signed assets (not transformed)
@@ -503,28 +495,52 @@ def auto_sample_uploads() -> bool:
     print(f"\nFound {len(all_images)} signed images")
     print(f"Found {len(all_videos)} signed videos")
 
-    if len(all_images) < 100:
-        print(f"\nWARNING: Only {len(all_images)} images available, need 100")
+    # Check minimum requirements (at least 1 asset of each type)
+    if len(all_images) == 0:
+        print(f"\nERROR: No signed images found in {images_dir}")
         return False
 
-    if len(all_videos) < 60:
-        print(f"\nWARNING: Only {len(all_videos)} videos available, need 60")
+    if len(all_videos) == 0:
+        print(f"\nERROR: No signed videos found in {videos_dir}")
         return False
 
-    # Platform distribution
+    # Calculate dynamic distribution
+    # 4 platforms support images: instagram, twitter, facebook, whatsapp
+    # 6 platforms support videos: all
+    num_image_platforms = 4
+    num_video_platforms = 6
+
+    images_per_platform = len(all_images) // num_image_platforms
+    videos_per_platform = len(all_videos) // num_video_platforms
+
+    # Ensure at least 1 per platform if possible
+    images_per_platform = max(1, images_per_platform) if len(all_images) >= num_image_platforms else 0
+    videos_per_platform = max(1, videos_per_platform) if len(all_videos) >= num_video_platforms else 0
+
+    total_images_to_use = images_per_platform * num_image_platforms
+    total_videos_to_use = videos_per_platform * num_video_platforms
+
+    print(f"\nDynamic distribution:")
+    print(f"  - {total_images_to_use} images total ({images_per_platform} per image-supporting platform)")
+    print(f"  - {total_videos_to_use} videos total ({videos_per_platform} per platform)")
+
+    if len(all_images) < 100 or len(all_videos) < 60:
+        print(f"\n  Note: Full distribution would use 100 images + 60 videos")
+
+    # Platform distribution (dynamically calculated)
     platform_distribution = {
-        'instagram': {'images': 25, 'videos': 10, 'mode': 'post'},
-        'twitter': {'images': 25, 'videos': 10, 'mode': 'upload'},
-        'facebook': {'images': 25, 'videos': 10, 'mode': 'post'},
-        'whatsapp': {'images': 25, 'videos': 10, 'mode': 'compressed'},
-        'youtube': {'images': 0, 'videos': 10, 'mode': 'upload'},
-        'tiktok': {'images': 0, 'videos': 10, 'mode': 'upload'}
+        'instagram': {'images': images_per_platform, 'videos': videos_per_platform, 'mode': 'post'},
+        'twitter': {'images': images_per_platform, 'videos': videos_per_platform, 'mode': 'upload'},
+        'facebook': {'images': images_per_platform, 'videos': videos_per_platform, 'mode': 'post'},
+        'whatsapp': {'images': images_per_platform, 'videos': videos_per_platform, 'mode': 'compressed'},
+        'youtube': {'images': 0, 'videos': videos_per_platform, 'mode': 'upload'},
+        'tiktok': {'images': 0, 'videos': videos_per_platform, 'mode': 'upload'}
     }
 
     # Randomly sample without replacement
     random.seed(42)  # For reproducibility
-    sampled_images = random.sample(all_images, 100)
-    sampled_videos = random.sample(all_videos, 60)
+    sampled_images = random.sample(all_images, min(total_images_to_use, len(all_images)))
+    sampled_videos = random.sample(all_videos, min(total_videos_to_use, len(all_videos)))
 
     # Distribute samples
     image_idx = 0

@@ -88,7 +88,8 @@ WORKFLOW:
    d. Place downloads in the 'returned\' subfolder
 
 3. After completing uploads/downloads for all platforms:
-   Run: c2pa phase 3
+   a. Run: c2pa rename-returns    (standardizes filenames)
+   b. Run: c2pa phase 3           (verifies C2PA and calculates metrics)
 
 PLATFORMS TO TEST:
 - instagram\    (images + videos)
@@ -194,6 +195,16 @@ switch ($Command) {
         Invoke-DockerCommand -UseGpu $false -CommandArgs @("status")
     }
 
+    "rename-returns" {
+        Write-Host "[Rename Platform Returns]" -ForegroundColor Yellow
+        Write-Host "Standardizing filenames for returned platform assets..." -ForegroundColor Cyan
+        Invoke-DockerCommand -UseGpu $false -CommandArgs @("python", "scripts/processing/preprocessing/platform/rename_platform_returns.py")
+        Write-Host ""
+        Write-Host "For WhatsApp files, also run:" -ForegroundColor Yellow
+        Write-Host "  c2pa shell"
+        Write-Host "  python scripts/processing/preprocessing/platform/rename_whatsapp_returns.py"
+    }
+
     "shell" {
         Write-Host "[Interactive Shell]" -ForegroundColor Yellow
         $shellArgs = @("run", "--rm", "-it") + $GpuFlag.Split() + @(
@@ -225,6 +236,7 @@ COMMANDS:
   test            Quick test run with minimal assets
   status          Check pipeline execution status
   setup           Extract c2patool to local tools directory
+  rename-returns  Rename downloaded platform files to standard format (run after phase 2.5 downloads)
   shell           Open interactive shell in container
 
 OPTIONS:

@@ -47,6 +47,7 @@ if "%1"=="phase" goto PHASE
 if "%1"=="run" goto RUN
 if "%1"=="test" goto TEST
 if "%1"=="status" goto STATUS
+if "%1"=="rename-returns" goto RENAME_RETURNS
 if "%1"=="shell" goto SHELL
 if "%1"=="--help" goto HELP
 if "%1"=="-h" goto HELP
@@ -152,7 +153,8 @@ echo    c. Download them back from the platform>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_
 echo    d. Place downloads in the 'returned\' subfolder>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo.>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo 3. After completing uploads/downloads for all platforms:>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
-echo    Run: c2pa phase 3>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
+echo    a. Run: c2pa rename-returns    (standardizes filenames)>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
+echo    b. Run: c2pa phase 3           (verifies C2PA and calculates metrics)>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo.>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo PLATFORMS TO TEST:>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
 echo - instagram\    (images + videos)>> "%OUTPUT_DIR%\PLATFORM_UPLOAD_INSTRUCTIONS.txt"
@@ -230,6 +232,21 @@ docker run --rm ^
     %IMAGE% status
 goto END
 
+:RENAME_RETURNS
+echo [Rename Platform Returns]
+echo Standardizing filenames for returned platform assets...
+docker run --rm ^
+    -v "%OUTPUT_DIR%:/workspace/data" ^
+    -v huggingface-cache:/workspace/.cache/huggingface ^
+    -v torch-cache:/workspace/.cache/torch ^
+    -v "%TOOLS_DIR%:/workspace/tools" ^
+    %IMAGE% python scripts/processing/preprocessing/platform/rename_platform_returns.py
+echo.
+echo For WhatsApp files, also run:
+echo   c2pa shell
+echo   python scripts/processing/preprocessing/platform/rename_whatsapp_returns.py
+goto END
+
 :SHELL
 echo [Interactive Shell]
 docker run --rm -it %GPU_FLAG% ^
@@ -257,6 +274,7 @@ echo   phase 4         Data analysis and visualization (exploratory plots or pub
 echo   run             Run complete pipeline (phases 1-4 sequentially)
 echo   test            Quick test run with minimal assets
 echo   status          Check pipeline execution status
+echo   rename-returns  Rename downloaded platform files to standard format (run after phase 2.5 downloads)
 echo   shell           Open interactive shell in container
 echo.
 echo OPTIONS:
